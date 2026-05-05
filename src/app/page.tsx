@@ -121,13 +121,13 @@ export default async function Today({
           />
         </div>
         <div>
-          <WeightCard date={date} recentLogs={recentAsc} />
+          <WeightCard key={date} date={date} recentLogs={recentAsc} />
         </div>
       </div>
 
       {/* Tile grid — wider columns on desktop */}
       <div className="mt-6">
-        <TileGrid date={date} initial={view} />
+        <TileGrid key={date} date={date} initial={view} />
       </div>
 
       {/* Bottom row — Streaks, Goals preview, Todos preview */}
