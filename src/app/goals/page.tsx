@@ -4,7 +4,6 @@ import {
   listDebtPayments,
   getLatestSavings,
   listSavings,
-  listPersonalIncome,
 } from "@/app/actions/goals";
 import { getRecentLogs } from "@/app/actions/daily";
 import {
@@ -30,7 +29,6 @@ import RevenueForm from "./_revenue-form";
 import DebtForm from "./_debt-form";
 import DebtManager from "./_debt-manager";
 import SavingsForm from "./_savings-form";
-import IncomeForm from "./_income-form";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +41,6 @@ export default async function GoalsPage() {
     payments,
     savings,
     savingsList,
-    income,
   ] = await Promise.all([
     getRecentLogs(180),
     listRevenue(),
@@ -51,7 +48,6 @@ export default async function GoalsPage() {
     listDebtPayments(),
     getLatestSavings(),
     listSavings(),
-    listPersonalIncome(),
   ]);
 
   // ---- Weight ----
@@ -88,15 +84,6 @@ export default async function GoalsPage() {
   const savingsBalance = cashBalance; // back-compat alias for any leftover refs
   const wealthBalance = cashBalance + investedBalance;
 
-  // ---- Personal income ----
-  const incomeYear = income.filter((e) =>
-    e.month.startsWith(`${REVENUE_YEAR}-`)
-  );
-  const incomeYTD = incomeYear.reduce((s, e) => s + Number(e.amount), 0);
-  const incomeMonthsLogged = incomeYear.length || 0;
-  const incomeMonthlyAvg =
-    incomeMonthsLogged > 0 ? incomeYTD / incomeMonthsLogged : 0;
-  const incomeProjected = incomeMonthlyAvg * 12;
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 pt-16 pb-10 lg:px-8 lg:pt-8">
@@ -182,112 +169,7 @@ export default async function GoalsPage() {
           <RevenueForm year={REVENUE_YEAR} entries={yearEntries} />
         </Card>
 
-        {/* Personal income */}
-        <Card>
-          <SectionHeader title="Personal income · take-home" tone="green" />
-          <Stat label="YTD" value={fmtMoney(incomeYTD)} />
-          <Stat label="Monthly avg" value={fmtMoney(incomeMonthlyAvg)} />
-          <Stat
-            label="Projected year-end"
-            value={fmtMoney(incomeProjected)}
-          />
-          <Stat
-            label="Months logged"
-            value={`${incomeMonthsLogged} of ${
-              new Date().getMonth() + 1
-            }`}
-          />
-          <div className="mt-4">
-            <IncomeForm year={REVENUE_YEAR} entries={incomeYear} />
-          </div>
-        </Card>
-
-        {/* Debt — full width */}
-        <div className="lg:col-span-2">
-          <Card>
-            <SectionHeader title="Debt elimination" tone="amber" />
-
-            {/* Hero summary — totals up top so they're seen first */}
-            <div className="mb-6 rounded-xl border border-amber-700/30 bg-gradient-to-br from-amber-950/20 to-zinc-950 p-5">
-              <div className="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                  <div className="text-xs uppercase tracking-wider text-amber-300/70">
-                    Total remaining
-                  </div>
-                  <div className="mt-1 text-4xl font-bold tabular-nums text-zinc-100">
-                    {fmtMoney(debtRemaining)}
-                  </div>
-                  <div className="mt-1 text-xs text-zinc-500 tabular-nums">
-                    {fmtMoney(debtPaid)} paid of {fmtMoney(debtTotal)} initial
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs uppercase tracking-wider text-zinc-500">
-                    % eliminated
-                  </div>
-                  <div className="mt-1 text-4xl font-bold tabular-nums text-amber-400">
-                    {pct(debtPaid, debtTotal).toFixed(1)}%
-                  </div>
-                </div>
-              </div>
-              <div className="mt-4">
-                <ProgressBar pct={pct(debtPaid, debtTotal)} tone="amber" />
-              </div>
-            </div>
-
-            {/* Breakdown strip — 4 labeled stats */}
-            <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-              <BreakdownStat label="Total initial" value={fmtMoney(debtTotal)} />
-              <BreakdownStat label="Total paid" value={fmtMoney(debtPaid)} accent="amber" />
-              <BreakdownStat label="Total remaining" value={fmtMoney(debtRemaining)} />
-              <BreakdownStat
-                label="% eliminated"
-                value={`${pct(debtPaid, debtTotal).toFixed(1)}%`}
-                accent="amber"
-              />
-            </div>
-
-            <div className="grid gap-6 lg:grid-cols-2">
-              <div>
-                <DebtManager debts={debts} paidByDebtId={paidByDebtId} />
-              </div>
-
-              <div>
-                <DebtForm debts={debts} />
-                {payments.length > 0 && (
-                  <div className="mt-6">
-                    <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-                      Recent payments
-                    </h3>
-                    <ul className="space-y-1 text-sm">
-                      {payments.slice(0, 10).map((p) => {
-                        const d = debts.find((x) => x.id === p.debt_id);
-                        return (
-                          <li
-                            key={p.id}
-                            className="flex justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2"
-                          >
-                            <span>
-                              <span className="mr-2 text-zinc-500 tabular-nums">
-                                {p.date}
-                              </span>
-                              {d?.name ?? "(archived debt)"}
-                            </span>
-                            <span className="tabular-nums">
-                              {fmtMoney(Number(p.amount))}
-                            </span>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {/* Wealth — cash + invested */}
+        {/* Wealth — cash + invested (full width, above debt) */}
         <div className="lg:col-span-2">
           <Card>
             <SectionHeader title="Cash + Invested" tone="blue" />
@@ -401,6 +283,92 @@ export default async function GoalsPage() {
             </div>
           </Card>
         </div>
+
+        {/* Debt — full width */}
+        <div className="lg:col-span-2">
+          <Card>
+            <SectionHeader title="Debt elimination" tone="amber" />
+
+            {/* Hero summary — totals up top so they're seen first */}
+            <div className="mb-6 rounded-xl border border-amber-700/30 bg-gradient-to-br from-amber-950/20 to-zinc-950 p-5">
+              <div className="flex flex-wrap items-end justify-between gap-4">
+                <div>
+                  <div className="text-xs uppercase tracking-wider text-amber-300/70">
+                    Total remaining
+                  </div>
+                  <div className="mt-1 text-4xl font-bold tabular-nums text-zinc-100">
+                    {fmtMoney(debtRemaining)}
+                  </div>
+                  <div className="mt-1 text-xs text-zinc-500 tabular-nums">
+                    {fmtMoney(debtPaid)} paid of {fmtMoney(debtTotal)} initial
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs uppercase tracking-wider text-zinc-500">
+                    % eliminated
+                  </div>
+                  <div className="mt-1 text-4xl font-bold tabular-nums text-amber-400">
+                    {pct(debtPaid, debtTotal).toFixed(1)}%
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4">
+                <ProgressBar pct={pct(debtPaid, debtTotal)} tone="amber" />
+              </div>
+            </div>
+
+            {/* Breakdown strip — 4 labeled stats */}
+            <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <BreakdownStat label="Total initial" value={fmtMoney(debtTotal)} />
+              <BreakdownStat label="Total paid" value={fmtMoney(debtPaid)} accent="amber" />
+              <BreakdownStat label="Total remaining" value={fmtMoney(debtRemaining)} />
+              <BreakdownStat
+                label="% eliminated"
+                value={`${pct(debtPaid, debtTotal).toFixed(1)}%`}
+                accent="amber"
+              />
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div>
+                <DebtManager debts={debts} paidByDebtId={paidByDebtId} />
+              </div>
+
+              <div>
+                <DebtForm debts={debts} />
+                {payments.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+                      Recent payments
+                    </h3>
+                    <ul className="space-y-1 text-sm">
+                      {payments.slice(0, 10).map((p) => {
+                        const d = debts.find((x) => x.id === p.debt_id);
+                        return (
+                          <li
+                            key={p.id}
+                            className="flex justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2"
+                          >
+                            <span>
+                              <span className="mr-2 text-zinc-500 tabular-nums">
+                                {p.date}
+                              </span>
+                              {d?.name ?? "(archived debt)"}
+                            </span>
+                            <span className="tabular-nums">
+                              {fmtMoney(Number(p.amount))}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
+        </div>
+
       </div>
     </div>
   );
