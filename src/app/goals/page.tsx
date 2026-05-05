@@ -2,8 +2,8 @@ import {
   listRevenue,
   listDebts,
   listDebtPayments,
-  getLatestSavings,
-  listSavings,
+  getWealthTotals,
+  listContributions,
 } from "@/app/actions/goals";
 import { getRecentLogs } from "@/app/actions/daily";
 import {
@@ -39,15 +39,15 @@ export default async function GoalsPage() {
     revenue,
     debts,
     payments,
-    savings,
-    savingsList,
+    wealthTotals,
+    contributions,
   ] = await Promise.all([
     getRecentLogs(180),
     listRevenue(),
     listDebts(),
     listDebtPayments(),
-    getLatestSavings(),
-    listSavings(),
+    getWealthTotals(),
+    listContributions(),
   ]);
 
   // ---- Weight ----
@@ -79,9 +79,8 @@ export default async function GoalsPage() {
   const debtRemaining = Math.max(0, debtTotal - debtPaid);
 
   // ---- Wealth (cash + invested) ----
-  const cashBalance = savings ? Number(savings.balance) : 0;
-  const investedBalance = savings ? Number(savings.invested_balance) : 0;
-  const savingsBalance = cashBalance; // back-compat alias for any leftover refs
+  const cashBalance = wealthTotals.cashTotal;
+  const investedBalance = wealthTotals.investedTotal;
   const wealthBalance = cashBalance + investedBalance;
 
 
@@ -233,50 +232,60 @@ export default async function GoalsPage() {
             <div className="grid gap-6 lg:grid-cols-2">
               <div>
                 <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-                  Add snapshot
+                  Log a contribution
                 </h3>
                 <SavingsForm />
                 <p className="mt-2 text-[11px] text-zinc-500">
-                  Update both balances together. Cash target {fmtMoney(SAVINGS_TARGET)},
+                  Each contribution adds to your running totals. Cash target {fmtMoney(SAVINGS_TARGET)},
                   invested target {fmtMoney(INVESTED_TARGET)}.
                 </p>
               </div>
               <div>
                 <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-                  Recent snapshots
+                  Recent contributions
                 </h3>
-                {savingsList.length > 0 ? (
+                {contributions.length > 0 ? (
                   <ul className="space-y-1 text-sm">
-                    {savingsList.slice(0, 10).map((s) => {
-                      const cash = Number(s.balance);
-                      const inv = Number(s.invested_balance);
+                    {contributions.slice(0, 10).map((s) => {
+                      const cash = Number(s.cash_amount);
+                      const inv = Number(s.invested_amount);
                       return (
                         <li
                           key={s.id}
-                          className="flex justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2"
+                          className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2"
                         >
-                          <span className="text-zinc-500 tabular-nums">
-                            {s.date}
-                          </span>
-                          <span className="tabular-nums">
-                            <span className="text-zinc-400">
-                              {fmtMoney(cash)}
+                          <div className="flex justify-between">
+                            <span className="text-zinc-500 tabular-nums">
+                              {s.date}
                             </span>
-                            <span className="mx-1 text-zinc-700">+</span>
-                            <span className="text-zinc-400">
-                              {fmtMoney(inv)}
+                            <span className="tabular-nums">
+                              {cash > 0 && (
+                                <span className="text-blue-400">
+                                  +{fmtMoney(cash)} cash
+                                </span>
+                              )}
+                              {cash > 0 && inv > 0 && (
+                                <span className="mx-1 text-zinc-700">·</span>
+                              )}
+                              {inv > 0 && (
+                                <span className="text-blue-400">
+                                  +{fmtMoney(inv)} inv
+                                </span>
+                              )}
                             </span>
-                            <span className="ml-2 font-medium">
-                              = {fmtMoney(cash + inv)}
-                            </span>
-                          </span>
+                          </div>
+                          {s.notes && (
+                            <div className="mt-0.5 text-[11px] text-zinc-500">
+                              {s.notes}
+                            </div>
+                          )}
                         </li>
                       );
                     })}
                   </ul>
                 ) : (
                   <p className="rounded-xl border border-dashed border-zinc-800 px-4 py-6 text-center text-xs text-zinc-600">
-                    No snapshots yet
+                    No contributions yet
                   </p>
                 )}
               </div>

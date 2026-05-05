@@ -91,12 +91,15 @@ export type DebtPayment = {
   notes: string | null;
 };
 
-export type SavingsSnapshot = {
+export type WealthContribution = {
   id: string;
   date: string;
-  balance: number; // cash balance
-  invested_balance: number; // invested balance
+  cash_amount: number; // deposit into cash on this date
+  invested_amount: number; // deposit into investments on this date
+  notes: string | null;
 };
+// Back-compat alias — older code still imports SavingsSnapshot.
+export type SavingsSnapshot = WealthContribution;
 
 export type PersonalIncomeEntry = {
   id: string;

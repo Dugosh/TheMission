@@ -6,6 +6,7 @@ import {
   Debt,
   DebtPayment,
   SavingsSnapshot,
+  WealthContribution,
   PersonalIncomeEntry,
 } from "@/lib/types";
 import { revalidatePath } from "next/cache";
@@ -137,42 +138,88 @@ export async function deleteDebtPayment(id: string) {
   revalidatePath("/goals");
 }
 
-// ---- Savings ----
+// ---- Wealth contributions (cash + invested deposits) ----
 
-export async function getLatestSavings(): Promise<SavingsSnapshot | null> {
+export async function listContributions(): Promise<WealthContribution[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase
-    .from("savings_snapshots")
+    .from("wealth_contributions")
     .select("*")
     .order("date", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
-  return data as SavingsSnapshot | null;
+  return (data || []) as WealthContribution[];
 }
 
-export async function listSavings(): Promise<SavingsSnapshot[]> {
+/** Sum every contribution into a single (cash, invested) pair. */
+export async function getWealthTotals(): Promise<{
+  cashTotal: number;
+  investedTotal: number;
+}> {
   const supabase = getSupabase();
   const { data, error } = await supabase
-    .from("savings_snapshots")
-    .select("*")
-    .order("date", { ascending: false });
+    .from("wealth_contributions")
+    .select("cash_amount, invested_amount");
   if (error) throw new Error(error.message);
-  return (data || []) as SavingsSnapshot[];
+  let cashTotal = 0;
+  let investedTotal = 0;
+  for (const row of data || []) {
+    cashTotal += Number(row.cash_amount ?? 0);
+    investedTotal += Number(row.invested_amount ?? 0);
+  }
+  return { cashTotal, investedTotal };
 }
 
+export async function addContribution(
+  date: string,
+  cash_amount: number,
+  invested_amount: number,
+  notes?: string
+) {
+  if (!cash_amount && !invested_amount) return;
+  const supabase = getSupabase();
+  const { error } = await supabase.from("wealth_contributions").insert({
+    date,
+    cash_amount,
+    invested_amount,
+    notes: notes?.trim() || null,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath("/goals");
+  revalidatePath("/");
+}
+
+export async function deleteContribution(id: string) {
+  const supabase = getSupabase();
+  const { error } = await supabase
+    .from("wealth_contributions")
+    .delete()
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/goals");
+  revalidatePath("/");
+}
+
+// Back-compat aliases — older imports/components still use these names.
+export const getLatestSavings = async () => {
+  const t = await getWealthTotals();
+  return t.cashTotal + t.investedTotal > 0
+    ? {
+        id: "_aggregate",
+        date: new Date().toISOString().slice(0, 10),
+        cash_amount: t.cashTotal,
+        invested_amount: t.investedTotal,
+        notes: null,
+      }
+    : null;
+};
+export const listSavings = listContributions;
 export async function addSavingsSnapshot(
   date: string,
   balance: number,
   invested_balance = 0
 ) {
-  const supabase = getSupabase();
-  const { error } = await supabase
-    .from("savings_snapshots")
-    .insert({ date, balance, invested_balance });
-  if (error) throw new Error(error.message);
-  revalidatePath("/goals");
-  revalidatePath("/");
+  return addContribution(date, balance, invested_balance);
 }
 
 // ---- Personal income ----

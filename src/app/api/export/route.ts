@@ -30,7 +30,7 @@ export async function GET() {
     sb.from("revenue_entries").select("*").order("month"),
     sb.from("debts").select("*").order("display_order"),
     sb.from("debt_payments").select("*").order("date"),
-    sb.from("savings_snapshots").select("*").order("date"),
+    sb.from("wealth_contributions").select("*").order("date"),
     sb.from("personal_income_entries").select("*").order("month"),
     sb.from("todos").select("*").order("created_at"),
   ]);
@@ -40,7 +40,7 @@ export async function GET() {
   parts.push("\n\n# SALES (revenue_entries)\n" + toCsv(revenue ?? []));
   parts.push("\n\n# DEBTS\n" + toCsv(debts ?? []));
   parts.push("\n\n# DEBT_PAYMENTS\n" + toCsv(payments ?? []));
-  parts.push("\n\n# SAVINGS_SNAPSHOTS\n" + toCsv(savings ?? []));
+  parts.push("\n\n# WEALTH_CONTRIBUTIONS\n" + toCsv(savings ?? []));
   parts.push("\n\n# PERSONAL_INCOME\n" + toCsv(income ?? []));
   parts.push("\n\n# TODOS\n" + toCsv(todos ?? []));
   const body = parts.join("");

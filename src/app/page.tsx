@@ -10,7 +10,7 @@ import {
   listRevenue,
   listDebts,
   listDebtPayments,
-  getLatestSavings,
+  getWealthTotals,
 } from "@/app/actions/goals";
 import {
   todayISO,
@@ -50,7 +50,7 @@ export default async function Today({
   const today = todayISO();
   const date = resolveDate(sp.d, today);
 
-  const [dayLog, recent, todos, revenue, debts, debtPayments, savings] =
+  const [dayLog, recent, todos, revenue, debts, debtPayments, wealthTotals] =
     await Promise.all([
       getDailyLog(date),
       getRecentLogs(180),
@@ -58,7 +58,7 @@ export default async function Today({
       listRevenue(),
       listDebts(),
       listDebtPayments(),
-      getLatestSavings(),
+      getWealthTotals(),
     ]);
 
   const map = new Map<string, Partial<DailyLog>>();
@@ -89,8 +89,8 @@ export default async function Today({
   const debtRemaining = Math.max(0, debtTotal - debtPaid);
   const debtPct = pct(debtPaid, debtTotal);
 
-  const cashBalance = savings ? Number(savings.balance) : 0;
-  const investedBalance = savings ? Number(savings.invested_balance) : 0;
+  const cashBalance = wealthTotals.cashTotal;
+  const investedBalance = wealthTotals.investedTotal;
   const wealthBalance = cashBalance + investedBalance;
   const wealthPct = pct(wealthBalance, WEALTH_TARGET);
 
