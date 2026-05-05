@@ -323,6 +323,25 @@ export default async function GoalsPage() {
               </div>
             </div>
 
+            {/* Visualizations — right under the hero so they're seen first */}
+            <div className="mb-6 grid gap-6 lg:grid-cols-2">
+              <div className="rounded-xl border border-zinc-800 bg-black/40 p-4">
+                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+                  Remaining by category
+                </h3>
+                <DebtPieChart slices={debtPieSlices} />
+              </div>
+              <div className="rounded-xl border border-zinc-800 bg-black/40 p-4">
+                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+                  Paydown over time
+                </h3>
+                <DebtPaydownChart
+                  payments={activePayments}
+                  totalDebt={debtTotal}
+                />
+              </div>
+            </div>
+
             {/* Breakdown strip — 4 labeled stats */}
             <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
               <BreakdownStat label="Total initial" value={fmtMoney(debtTotal)} />
@@ -373,24 +392,6 @@ export default async function GoalsPage() {
               </div>
             </div>
 
-            {/* Visualizations */}
-            <div className="mt-8 grid gap-6 lg:grid-cols-2">
-              <div className="rounded-xl border border-zinc-800 bg-black/40 p-4">
-                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-                  Remaining by category
-                </h3>
-                <DebtPieChart slices={debtPieSlices} />
-              </div>
-              <div className="rounded-xl border border-zinc-800 bg-black/40 p-4">
-                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-                  Paydown over time
-                </h3>
-                <DebtPaydownChart
-                  payments={activePayments}
-                  totalDebt={debtTotal}
-                />
-              </div>
-            </div>
           </Card>
         </div>
 
