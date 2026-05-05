@@ -279,24 +279,38 @@ export default async function GoalsPage() {
         <div className="lg:col-span-2">
           <Card>
             <SectionHeader title="Debt elimination" tone="amber" />
+
+            {/* Hero summary — totals up top so they're seen first */}
+            <div className="mb-6 rounded-xl border border-amber-700/30 bg-gradient-to-br from-amber-950/20 to-zinc-950 p-5">
+              <div className="flex flex-wrap items-end justify-between gap-4">
+                <div>
+                  <div className="text-xs uppercase tracking-wider text-amber-300/70">
+                    Total remaining
+                  </div>
+                  <div className="mt-1 text-4xl font-bold tabular-nums text-zinc-100">
+                    {fmtMoney(debtRemaining)}
+                  </div>
+                  <div className="mt-1 text-xs text-zinc-500 tabular-nums">
+                    {fmtMoney(debtPaid)} paid of {fmtMoney(debtTotal)} initial
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs uppercase tracking-wider text-zinc-500">
+                    % eliminated
+                  </div>
+                  <div className="mt-1 text-4xl font-bold tabular-nums text-amber-400">
+                    {pct(debtPaid, debtTotal).toFixed(1)}%
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4">
+                <ProgressBar pct={pct(debtPaid, debtTotal)} tone="amber" />
+              </div>
+            </div>
+
             <div className="grid gap-6 lg:grid-cols-2">
               <div>
                 <DebtManager debts={debts} paidByDebtId={paidByDebtId} />
-                <div className="mt-4 border-t border-zinc-800 pt-4">
-                  <Stat label="Total initial" value={fmtMoney(debtTotal)} />
-                  <Stat label="Total paid" value={fmtMoney(debtPaid)} />
-                  <Stat
-                    label="Total remaining"
-                    value={fmtMoney(debtRemaining)}
-                  />
-                  <Stat
-                    label="% eliminated"
-                    value={`${pct(debtPaid, debtTotal).toFixed(1)}%`}
-                  />
-                  <div className="mt-3">
-                    <ProgressBar pct={pct(debtPaid, debtTotal)} tone="amber" />
-                  </div>
-                </div>
               </div>
 
               <div>
