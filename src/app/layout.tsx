@@ -25,7 +25,7 @@ export default async function RootLayout({
     <html lang="en" className="dark">
       <body className="bg-zinc-950 text-zinc-100 min-h-screen">
         {authed && <Nav />}
-        <main className="pb-24">{children}</main>
+        <main className="pb-32">{children}</main>
       </body>
     </html>
   );

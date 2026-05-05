@@ -63,10 +63,18 @@ export type RevenueEntry = {
   amount: number;
 };
 
+export type Debt = {
+  id: string;
+  name: string;
+  initial_balance: number;
+  display_order: number;
+  archived: boolean;
+};
+
 export type DebtPayment = {
   id: string;
   date: string;
-  debt_type: "credit_card" | "irs" | "student_loan";
+  debt_id: string;
   amount: number;
   notes: string | null;
 };
@@ -93,12 +101,6 @@ export const WEIGHT_DEADLINE = "2026-12-31";
 export const REVENUE_MIN = 1_500_000;
 export const REVENUE_STRETCH = 2_000_000;
 export const REVENUE_YEAR = 2026;
-
-export const DEBT_INITIAL = {
-  credit_card: 10_730,
-  irs: 42_000,
-  student_loan: 25_000,
-} as const;
 
 export const SAVINGS_TARGET = 100_000;
 

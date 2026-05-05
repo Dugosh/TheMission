@@ -2,28 +2,29 @@
 
 import { useState, useTransition } from "react";
 import { addDebtPayment } from "@/app/actions/goals";
+import { Debt } from "@/lib/types";
 import { todayISO } from "@/lib/calc";
 
-const TYPES = [
-  { value: "credit_card", label: "Credit cards" },
-  { value: "irs", label: "IRS" },
-  { value: "student_loan", label: "Student loans" },
-] as const;
-
-export default function DebtForm() {
+export default function DebtForm({ debts }: { debts: Debt[] }) {
   const [date, setDate] = useState(todayISO());
-  const [type, setType] = useState<(typeof TYPES)[number]["value"]>(
-    "credit_card"
-  );
+  const [debtId, setDebtId] = useState<string>(debts[0]?.id ?? "");
   const [amount, setAmount] = useState("");
   const [pending, start] = useTransition();
+
+  if (debts.length === 0) {
+    return (
+      <p className="rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-500">
+        Add a debt account first.
+      </p>
+    );
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const n = parseFloat(amount.replace(/[$,]/g, ""));
-    if (isNaN(n) || n <= 0) return;
+    if (isNaN(n) || n <= 0 || !debtId) return;
     start(async () => {
-      await addDebtPayment({ date, debt_type: type, amount: n });
+      await addDebtPayment({ date, debt_id: debtId, amount: n });
       setAmount("");
     });
   }
@@ -49,27 +50,27 @@ export default function DebtForm() {
           className="rounded border border-zinc-800 bg-zinc-950 px-2 py-2 text-sm w-32 text-right"
         />
       </div>
-      <div className="flex gap-2">
-        {TYPES.map((t) => (
+      <div className="flex flex-wrap gap-2">
+        {debts.map((d) => (
           <button
-            key={t.value}
+            key={d.id}
             type="button"
-            onClick={() => setType(t.value)}
+            onClick={() => setDebtId(d.id)}
             className={
-              "flex-1 rounded border px-2 py-1.5 text-xs " +
-              (type === t.value
+              "rounded-full border px-3 py-1.5 text-xs " +
+              (debtId === d.id
                 ? "border-amber-500 bg-amber-500/10 text-amber-300 font-semibold"
                 : "border-zinc-800 text-zinc-400")
             }
           >
-            {t.label}
+            {d.name}
           </button>
         ))}
       </div>
       <button
         type="submit"
-        disabled={pending || !amount}
-        className="w-full rounded bg-zinc-100 py-2 text-sm font-semibold text-zinc-950 disabled:opacity-50"
+        disabled={pending || !amount || !debtId}
+        className="w-full rounded-lg bg-zinc-100 py-2.5 text-sm font-semibold text-zinc-950 disabled:opacity-50"
       >
         {pending ? "Saving..." : "Add payment"}
       </button>

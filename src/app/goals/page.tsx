@@ -1,5 +1,6 @@
 import {
   listRevenue,
+  listDebts,
   listDebtPayments,
   getLatestSavings,
   listSavings,
@@ -20,7 +21,6 @@ import {
   REVENUE_MIN,
   REVENUE_STRETCH,
   REVENUE_YEAR,
-  DEBT_INITIAL,
   SAVINGS_TARGET,
   ONLINE_BUSINESS_STAGES,
   EQUITY_STAGES,
@@ -28,6 +28,7 @@ import {
 import ProgressBar from "@/components/ProgressBar";
 import RevenueForm from "./_revenue-form";
 import DebtForm from "./_debt-form";
+import DebtManager from "./_debt-manager";
 import SavingsForm from "./_savings-form";
 import StatusForm from "./_status-form";
 
@@ -35,14 +36,16 @@ export const dynamic = "force-dynamic";
 
 export default async function GoalsPage() {
   const today = todayISO();
-  const [logs, revenue, debts, savings, savingsList, state] = await Promise.all([
-    getRecentLogs(180),
-    listRevenue(),
-    listDebtPayments(),
-    getLatestSavings(),
-    listSavings(),
-    getGoalsState(),
-  ]);
+  const [logs, revenue, debts, payments, savings, savingsList, state] =
+    await Promise.all([
+      getRecentLogs(180),
+      listRevenue(),
+      listDebts(),
+      listDebtPayments(),
+      getLatestSavings(),
+      listSavings(),
+      getGoalsState(),
+    ]);
 
   // ---- Weight ----
   const avg7 = rollingAverageWeight(logs, today, 7);
@@ -63,15 +66,17 @@ export default async function GoalsPage() {
   const projectedYearEnd = monthlyRunRate * 12;
 
   // ---- Debt ----
-  const byType = {
-    credit_card: 0,
-    irs: 0,
-    student_loan: 0,
-  };
-  for (const d of debts) byType[d.debt_type] += Number(d.amount);
-  const debtPaid = byType.credit_card + byType.irs + byType.student_loan;
-  const debtTotal =
-    DEBT_INITIAL.credit_card + DEBT_INITIAL.irs + DEBT_INITIAL.student_loan;
+  const paidByDebtId: Record<string, number> = {};
+  for (const p of payments) {
+    if (!p.debt_id) continue;
+    paidByDebtId[p.debt_id] = (paidByDebtId[p.debt_id] ?? 0) + Number(p.amount);
+  }
+  const debtTotal = debts.reduce(
+    (s, d) => s + Number(d.initial_balance),
+    0
+  );
+  const debtPaid = Object.values(paidByDebtId).reduce((s, n) => s + n, 0);
+  const debtRemaining = Math.max(0, debtTotal - debtPaid);
 
   // ---- Savings ----
   const savingsBalance = savings ? Number(savings.balance) : 0;
@@ -92,9 +97,7 @@ export default async function GoalsPage() {
         <Stat
           label="Lost"
           value={
-            avg7 != null
-              ? `${(WEIGHT_START - avg7).toFixed(1)} lbs`
-              : "—"
+            avg7 != null ? `${(WEIGHT_START - avg7).toFixed(1)} lbs` : "—"
           }
         />
         <Stat
@@ -115,10 +118,7 @@ export default async function GoalsPage() {
               : "—"
           }
         />
-        <Stat
-          label="Projected hit date"
-          value={projection.etaDate ?? "—"}
-        />
+        <Stat label="Projected hit date" value={projection.etaDate ?? "—"} />
         <Stat label="Deadline" value={WEIGHT_DEADLINE} />
         <div className="mt-3">
           <ProgressBar
@@ -146,45 +146,22 @@ export default async function GoalsPage() {
           label="% to stretch"
           value={`${pct(ytd, REVENUE_STRETCH).toFixed(1)}%`}
         />
-        <Stat
-          label="Monthly run rate"
-          value={fmtMoney(monthlyRunRate)}
-        />
-        <Stat
-          label="Projected year-end"
-          value={fmtMoney(projectedYearEnd)}
-        />
+        <Stat label="Monthly run rate" value={fmtMoney(monthlyRunRate)} />
+        <Stat label="Projected year-end" value={fmtMoney(projectedYearEnd)} />
         <div className="mt-3 mb-4">
           <ProgressBar pct={pct(ytd, REVENUE_MIN)} tone="blue" />
         </div>
-
         <RevenueForm year={REVENUE_YEAR} entries={yearEntries} />
       </section>
 
       {/* Debt */}
       <section>
         <SectionHeader title="Debt elimination" tone="amber" />
-        <DebtRow
-          label="Credit cards"
-          paid={byType.credit_card}
-          total={DEBT_INITIAL.credit_card}
-        />
-        <DebtRow
-          label="IRS"
-          paid={byType.irs}
-          total={DEBT_INITIAL.irs}
-        />
-        <DebtRow
-          label="Student loans"
-          paid={byType.student_loan}
-          total={DEBT_INITIAL.student_loan}
-        />
+        <DebtManager debts={debts} paidByDebtId={paidByDebtId} />
         <div className="mt-4 border-t border-zinc-800 pt-4">
+          <Stat label="Total initial" value={fmtMoney(debtTotal)} />
           <Stat label="Total paid" value={fmtMoney(debtPaid)} />
-          <Stat
-            label="Total remaining"
-            value={fmtMoney(Math.max(0, debtTotal - debtPaid))}
-          />
+          <Stat label="Total remaining" value={fmtMoney(debtRemaining)} />
           <Stat
             label="% eliminated"
             value={`${pct(debtPaid, debtTotal).toFixed(1)}%`}
@@ -195,31 +172,34 @@ export default async function GoalsPage() {
         </div>
 
         <div className="mt-6">
-          <DebtForm />
+          <DebtForm debts={debts} />
         </div>
 
-        {debts.length > 0 && (
+        {payments.length > 0 && (
           <div className="mt-6">
             <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
               Recent payments
             </h3>
             <ul className="space-y-1 text-sm">
-              {debts.slice(0, 10).map((d) => (
-                <li
-                  key={d.id}
-                  className="flex justify-between rounded border border-zinc-800 bg-zinc-950 px-3 py-2"
-                >
-                  <span>
-                    <span className="mr-2 text-zinc-500 tabular-nums">
-                      {d.date}
+              {payments.slice(0, 10).map((p) => {
+                const d = debts.find((x) => x.id === p.debt_id);
+                return (
+                  <li
+                    key={p.id}
+                    className="flex justify-between rounded border border-zinc-800 bg-zinc-950 px-3 py-2"
+                  >
+                    <span>
+                      <span className="mr-2 text-zinc-500 tabular-nums">
+                        {p.date}
+                      </span>
+                      {d?.name ?? "(archived debt)"}
                     </span>
-                    {d.debt_type.replace("_", " ")}
-                  </span>
-                  <span className="tabular-nums">
-                    {fmtMoney(Number(d.amount))}
-                  </span>
-                </li>
-              ))}
+                    <span className="tabular-nums">
+                      {fmtMoney(Number(p.amount))}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}
@@ -315,33 +295,6 @@ function Stat({ label, value }: { label: string; value: string }) {
     <div className="flex items-baseline justify-between border-b border-zinc-900 py-1.5">
       <span className="text-sm text-zinc-400">{label}</span>
       <span className="tabular-nums text-sm font-medium">{value}</span>
-    </div>
-  );
-}
-
-function DebtRow({
-  label,
-  paid,
-  total,
-}: {
-  label: string;
-  paid: number;
-  total: number;
-}) {
-  const remaining = Math.max(0, total - paid);
-  return (
-    <div className="mb-3">
-      <div className="mb-1 flex justify-between">
-        <span className="text-sm font-medium">{label}</span>
-        <span className="tabular-nums text-sm">
-          {fmtMoney(remaining)} <span className="text-zinc-500">left</span>
-        </span>
-      </div>
-      <ProgressBar pct={pct(paid, total)} tone="amber" />
-      <div className="mt-1 flex justify-between text-xs text-zinc-500">
-        <span>{fmtMoney(paid)} paid</span>
-        <span>of {fmtMoney(total)}</span>
-      </div>
     </div>
   );
 }

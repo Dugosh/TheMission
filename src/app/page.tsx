@@ -8,6 +8,7 @@ import { getDailyLog, getRecentLogs } from "@/app/actions/daily";
 import { listOpenTodos } from "@/app/actions/todos";
 import {
   listRevenue,
+  listDebts,
   listDebtPayments,
   getLatestSavings,
 } from "@/app/actions/goals";
@@ -26,7 +27,6 @@ import {
   WEIGHT_TARGET,
   REVENUE_MIN,
   REVENUE_YEAR,
-  DEBT_INITIAL,
   SAVINGS_TARGET,
 } from "@/lib/types";
 
@@ -50,14 +50,16 @@ export default async function Today({
   const today = todayISO();
   const date = resolveDate(sp.d, today);
 
-  const [dayLog, recent, todos, revenue, debts, savings] = await Promise.all([
-    getDailyLog(date),
-    getRecentLogs(180),
-    listOpenTodos(),
-    listRevenue(),
-    listDebtPayments(),
-    getLatestSavings(),
-  ]);
+  const [dayLog, recent, todos, revenue, debts, debtPayments, savings] =
+    await Promise.all([
+      getDailyLog(date),
+      getRecentLogs(180),
+      listOpenTodos(),
+      listRevenue(),
+      listDebts(),
+      listDebtPayments(),
+      getLatestSavings(),
+    ]);
 
   const map = new Map<string, Partial<DailyLog>>();
   for (const r of recent) if (r.date) map.set(r.date, r);
@@ -82,9 +84,8 @@ export default async function Today({
     .reduce((sum, r) => sum + Number(r.amount), 0);
   const revenuePct = pct(ytdRevenue, REVENUE_MIN);
 
-  const debtPaid = debts.reduce((s, d) => s + Number(d.amount), 0);
-  const debtTotal =
-    DEBT_INITIAL.credit_card + DEBT_INITIAL.irs + DEBT_INITIAL.student_loan;
+  const debtTotal = debts.reduce((s, d) => s + Number(d.initial_balance), 0);
+  const debtPaid = debtPayments.reduce((s, p) => s + Number(p.amount), 0);
   const debtRemaining = Math.max(0, debtTotal - debtPaid);
   const debtPct = pct(debtPaid, debtTotal);
 
@@ -166,7 +167,11 @@ export default async function Today({
           <GoalRow
             label="Debt"
             primary={`${fmtMoney(debtRemaining)} left`}
-            secondary={`${debtPct.toFixed(1)}% paid of ${fmtMoney(debtTotal)}`}
+            secondary={
+              debtTotal > 0
+                ? `${debtPct.toFixed(1)}% paid of ${fmtMoney(debtTotal)}`
+                : "No debts tracked"
+            }
             pct={debtPct}
             tone="amber"
           />
@@ -239,8 +244,17 @@ function GoalRow({
   pct: number;
   tone?: "green" | "blue" | "amber";
 }) {
+  const accent =
+    tone === "green"
+      ? "bg-emerald-500"
+      : tone === "blue"
+      ? "bg-sky-500"
+      : "bg-amber-500";
   return (
-    <div>
+    <div className="relative pl-3">
+      <span
+        className={"absolute left-0 top-0.5 h-full w-1 rounded-full " + accent}
+      />
       <div className="mb-1 flex items-baseline justify-between gap-2">
         <span className="text-sm font-medium">{label}</span>
         <span className="tabular-nums text-sm font-semibold">{primary}</span>
