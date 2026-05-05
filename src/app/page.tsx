@@ -85,7 +85,13 @@ export default async function Today({
   const revenuePct = pct(ytdRevenue, REVENUE_MIN);
 
   const debtTotal = debts.reduce((s, d) => s + Number(d.initial_balance), 0);
-  const debtPaid = debtPayments.reduce((s, p) => s + Number(p.amount), 0);
+  // Only count payments to active debts (mirror Goals page logic).
+  const activeDebtIds = new Set(debts.map((d) => d.id));
+  const debtPaid = debtPayments.reduce(
+    (s, p) =>
+      p.debt_id && activeDebtIds.has(p.debt_id) ? s + Number(p.amount) : s,
+    0
+  );
   const debtRemaining = Math.max(0, debtTotal - debtPaid);
   const debtPct = pct(debtPaid, debtTotal);
 

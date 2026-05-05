@@ -30,6 +30,9 @@ import DebtForm from "./_debt-form";
 import DebtManager from "./_debt-manager";
 import SavingsForm from "./_savings-form";
 import ContributionsList from "./_contributions-list";
+import DebtPieChart from "@/components/DebtPieChart";
+import DebtPaydownChart from "@/components/DebtPaydownChart";
+import { DEBT_CATEGORIES } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -70,14 +73,50 @@ export default async function GoalsPage() {
   const projectedYearEnd = monthlyRunRate * 12;
 
   // ---- Debt ----
+  // Only count payments that go to ACTIVE debts. Otherwise archiving a debt
+  // with prior payments would inflate debtPaid (still counted) while debtTotal
+  // (active only) would drop, pushing % eliminated artificially high.
+  const activeDebtIds = new Set(debts.map((d) => d.id));
   const paidByDebtId: Record<string, number> = {};
   for (const p of payments) {
-    if (!p.debt_id) continue;
+    if (!p.debt_id || !activeDebtIds.has(p.debt_id)) continue;
     paidByDebtId[p.debt_id] = (paidByDebtId[p.debt_id] ?? 0) + Number(p.amount);
   }
   const debtTotal = debts.reduce((s, d) => s + Number(d.initial_balance), 0);
   const debtPaid = Object.values(paidByDebtId).reduce((s, n) => s + n, 0);
   const debtRemaining = Math.max(0, debtTotal - debtPaid);
+
+  // ---- Chart data ----
+  // Pie: remaining $ per category, only categories with non-zero remaining
+  const CATEGORY_COLORS: Record<string, string> = {
+    "Credit Card": "#ef4444", // red
+    "Auto Loan": "#3b82f6", // blue
+    "Student Loan": "#8b5cf6", // violet
+    Tax: "#f59e0b", // amber
+    Medical: "#ec4899", // pink
+    "Personal Loan": "#14b8a6", // teal
+    Other: "#71717a", // zinc
+  };
+  const remainingByCat: Record<string, number> = {};
+  for (const d of debts) {
+    const remaining = Math.max(
+      0,
+      Number(d.initial_balance) - (paidByDebtId[d.id] ?? 0)
+    );
+    remainingByCat[d.category] =
+      (remainingByCat[d.category] ?? 0) + remaining;
+  }
+  const debtPieSlices = DEBT_CATEGORIES.map((cat) => ({
+    label: cat,
+    value: remainingByCat[cat] ?? 0,
+    color: "",
+    hex: CATEGORY_COLORS[cat] ?? "#71717a",
+  })).filter((s) => s.value > 0);
+
+  // Line chart: payments to active debts only, with date + amount
+  const activePayments = payments
+    .filter((p) => p.debt_id && activeDebtIds.has(p.debt_id))
+    .map((p) => ({ date: p.date, amount: Number(p.amount) }));
 
   // ---- Wealth (cash + invested) ----
   const cashBalance = wealthTotals.cashTotal;
@@ -331,6 +370,25 @@ export default async function GoalsPage() {
                     </ul>
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Visualizations */}
+            <div className="mt-8 grid gap-6 lg:grid-cols-2">
+              <div className="rounded-xl border border-zinc-800 bg-black/40 p-4">
+                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+                  Remaining by category
+                </h3>
+                <DebtPieChart slices={debtPieSlices} />
+              </div>
+              <div className="rounded-xl border border-zinc-800 bg-black/40 p-4">
+                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+                  Paydown over time
+                </h3>
+                <DebtPaydownChart
+                  payments={activePayments}
+                  totalDebt={debtTotal}
+                />
               </div>
             </div>
           </Card>
