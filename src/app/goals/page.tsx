@@ -308,6 +308,18 @@ export default async function GoalsPage() {
               </div>
             </div>
 
+            {/* Breakdown strip — 4 labeled stats */}
+            <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <BreakdownStat label="Total initial" value={fmtMoney(debtTotal)} />
+              <BreakdownStat label="Total paid" value={fmtMoney(debtPaid)} accent="amber" />
+              <BreakdownStat label="Total remaining" value={fmtMoney(debtRemaining)} />
+              <BreakdownStat
+                label="% eliminated"
+                value={`${pct(debtPaid, debtTotal).toFixed(1)}%`}
+                accent="amber"
+              />
+            </div>
+
             <div className="grid gap-6 lg:grid-cols-2">
               <div>
                 <DebtManager debts={debts} paidByDebtId={paidByDebtId} />
@@ -444,6 +456,31 @@ function Stat({ label, value }: { label: string; value: string }) {
     <div className="flex items-baseline justify-between border-b border-zinc-900 py-1.5">
       <span className="text-sm text-zinc-400">{label}</span>
       <span className="tabular-nums text-sm font-medium">{value}</span>
+    </div>
+  );
+}
+
+function BreakdownStat({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string;
+  accent?: "amber";
+}) {
+  return (
+    <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3">
+      <div className="text-[11px] uppercase tracking-wider text-zinc-500">
+        {label}
+      </div>
+      <div
+        className={`mt-1 text-xl font-semibold tabular-nums ${
+          accent === "amber" ? "text-amber-400" : "text-zinc-100"
+        }`}
+      >
+        {value}
+      </div>
     </div>
   );
 }
