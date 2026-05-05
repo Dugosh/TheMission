@@ -26,7 +26,7 @@ export default async function HistoryPage() {
   const month = monthSummary(map, today);
 
   return (
-    <div className="mx-auto max-w-2xl px-4 pt-6 pb-12 space-y-10">
+    <div className="mx-auto w-full max-w-7xl px-4 pt-16 pb-10 lg:px-8 lg:pt-8 space-y-10">
       {/* Calendar — top of page, centered */}
       <section>
         <div className="mb-5 flex items-center justify-between">

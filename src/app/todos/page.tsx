@@ -10,7 +10,7 @@ export default async function TodosPage() {
   ]);
 
   return (
-    <div className="mx-auto max-w-2xl px-4 pt-6 pb-12">
+    <div className="mx-auto w-full max-w-7xl px-4 pt-16 pb-10 lg:px-8 lg:pt-8">
       <h1 className="mb-6 text-3xl font-bold tracking-tight">Todos</h1>
       <TodoList open={open} recent={recent} />
     </div>

@@ -34,14 +34,17 @@ export default function TodoList({
   }
 
   return (
-    <>
-      <form onSubmit={add} className="space-y-2">
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,360px)_1fr]">
+      <form onSubmit={add} className="space-y-2 lg:sticky lg:top-6 lg:self-start">
+        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+          New todo
+        </h2>
         <input
           type="text"
           placeholder="What needs to get done?"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="w-full rounded border border-zinc-800 bg-zinc-950 px-3 py-3 text-base focus:border-zinc-500 focus:outline-none"
+          className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-3 text-base focus:border-zinc-500 focus:outline-none"
         />
         <div className="flex flex-wrap gap-1.5">
           {CATEGORIES.map((c) => (
@@ -80,40 +83,44 @@ export default function TodoList({
         <button
           type="submit"
           disabled={pending || !title.trim()}
-          className="w-full rounded bg-zinc-100 py-2.5 text-sm font-semibold text-zinc-950 disabled:opacity-50"
+          className="w-full rounded-lg bg-zinc-100 py-2.5 text-sm font-semibold text-zinc-950 disabled:opacity-50"
         >
           {pending ? "Adding..." : "Add"}
         </button>
       </form>
 
-      <section className="mt-8">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-          Open ({open.length})
-        </h2>
-        {open.length === 0 ? (
-          <p className="text-sm text-zinc-500">All clear.</p>
-        ) : (
-          <ul className="space-y-1.5">
-            {open.map((t) => (
-              <Item key={t.id} todo={t} />
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {recent.length > 0 && (
-        <section className="mt-8">
+      <div>
+        <section>
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-            Recently completed
+            Open ({open.length})
           </h2>
-          <ul className="space-y-1.5">
-            {recent.map((t) => (
-              <Item key={t.id} todo={t} />
-            ))}
-          </ul>
+          {open.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-zinc-800 px-4 py-6 text-center text-sm text-zinc-500">
+              All clear.
+            </p>
+          ) : (
+            <ul className="space-y-1.5">
+              {open.map((t) => (
+                <Item key={t.id} todo={t} />
+              ))}
+            </ul>
+          )}
         </section>
-      )}
-    </>
+
+        {recent.length > 0 && (
+          <section className="mt-8">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+              Recently completed
+            </h2>
+            <ul className="space-y-1.5">
+              {recent.map((t) => (
+                <Item key={t.id} todo={t} />
+              ))}
+            </ul>
+          </section>
+        )}
+      </div>
+    </div>
   );
 }
 

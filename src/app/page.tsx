@@ -106,127 +106,150 @@ export default async function Today({
     .sort((a, b) => (a.date! < b.date! ? -1 : 1));
 
   return (
-    <div className="mx-auto max-w-2xl px-4 pt-5 pb-12 space-y-5">
-      <Hero
-        date={date}
-        todayDate={today}
-        cleanStreak={cleanStreak}
-        cleanCountToday={cleanCountToday}
-        workoutDoneToday={workoutDoneView}
-        targetsHitToday={targets.hit}
-        targetsTotal={targets.total}
-      />
-
-      <WeightCard date={date} recentLogs={recentAsc} />
-
-      <TileGrid date={date} initial={view} />
-
-      <section className="pt-4">
-        <h2 className="mb-3 px-0.5 text-sm font-bold uppercase tracking-widest text-zinc-300">
-          Streaks
-        </h2>
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-          <StreakCard label="Clean (all)" count={cleanStreak} accent="green" />
-          <StreakCard label="Workout" count={workoutStreak} accent="green" />
-          {subStreaks.map((s) => (
-            <StreakCard key={s.label} label={s.label} count={s.count} />
-          ))}
+    <div className="mx-auto w-full max-w-7xl px-4 pt-16 pb-10 lg:px-8 lg:pt-8">
+      {/* Top row — Hero spans 2/3, Weight 1/3 on desktop */}
+      <div className="grid gap-5 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <Hero
+            date={date}
+            todayDate={today}
+            cleanStreak={cleanStreak}
+            cleanCountToday={cleanCountToday}
+            workoutDoneToday={workoutDoneView}
+            targetsHitToday={targets.hit}
+            targetsTotal={targets.total}
+          />
         </div>
-      </section>
+        <div>
+          <WeightCard date={date} recentLogs={recentAsc} />
+        </div>
+      </div>
 
-      <section className="pt-4">
-        <div className="mb-3 flex items-center justify-between px-0.5">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-300">
-            Goals
+      {/* Tile grid — wider columns on desktop */}
+      <div className="mt-6">
+        <TileGrid date={date} initial={view} />
+      </div>
+
+      {/* Bottom row — Streaks, Goals preview, Todos preview */}
+      <div className="mt-8 grid gap-6 lg:grid-cols-3">
+        {/* Streaks */}
+        <section className="lg:col-span-1">
+          <h2 className="mb-3 px-0.5 text-sm font-bold uppercase tracking-widest text-zinc-300">
+            Streaks
           </h2>
-          <Link
-            href="/goals"
-            className="text-[10px] uppercase tracking-wider text-zinc-500 hover:text-zinc-300"
-          >
-            Manage →
-          </Link>
-        </div>
-        <div className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
-          <GoalRow
-            label="Weight"
-            primary={avg7 != null ? `${avg7.toFixed(1)} lbs` : "no weigh-ins"}
-            secondary={
-              avg7 != null
-                ? `${(WEIGHT_START - avg7).toFixed(1)} lost · ${Math.max(0, avg7 - WEIGHT_TARGET).toFixed(1)} to go`
-                : `target ${WEIGHT_TARGET} lbs`
-            }
-            pct={avg7 != null ? pct(WEIGHT_START - avg7, WEIGHT_START - WEIGHT_TARGET) : 0}
-          />
-          <GoalRow
-            label="Sales"
-            primary={fmtMoney(ytdRevenue)}
-            secondary={`${revenuePct.toFixed(1)}% to ${fmtMoney(REVENUE_MIN)}`}
-            pct={revenuePct}
-            tone="blue"
-          />
-          <GoalRow
-            label="Debt"
-            primary={`${fmtMoney(debtRemaining)} left`}
-            secondary={
-              debtTotal > 0
-                ? `${debtPct.toFixed(1)}% paid of ${fmtMoney(debtTotal)}`
-                : "No debts tracked"
-            }
-            pct={debtPct}
-            tone="amber"
-          />
-          <GoalRow
-            label="Savings"
-            primary={fmtMoney(savingsBalance)}
-            secondary={`${savingsPct.toFixed(1)}% of ${fmtMoney(SAVINGS_TARGET)}`}
-            pct={savingsPct}
-            tone="blue"
-          />
-        </div>
-      </section>
-
-      <section className="pt-4">
-        <div className="mb-3 flex items-center justify-between px-0.5">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-300">
-            Open todos
-          </h2>
-          <Link
-            href="/todos"
-            className="text-[10px] uppercase tracking-wider text-zinc-500 hover:text-zinc-300"
-          >
-            Manage →
-          </Link>
-        </div>
-        {todos.length === 0 ? (
-          <p className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-6 text-center text-sm text-zinc-500">
-            Nothing open. Clean slate.
-          </p>
-        ) : (
-          <ul className="space-y-1.5">
-            {todos.slice(0, 6).map((t) => (
-              <li
-                key={t.id}
-                className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-sm"
-              >
-                <span className="flex-1 truncate">
-                  <span
-                    className={
-                      "mr-2 text-[10px] uppercase tracking-wider " +
-                      priorityColor(t.priority)
-                    }
-                  >
-                    {t.priority}
-                  </span>
-                  {t.title}
-                </span>
-                <span className="ml-2 text-[10px] uppercase tracking-wider text-zinc-500 shrink-0">
-                  {t.category}
-                </span>
-              </li>
+          <div className="grid grid-cols-3 gap-2">
+            <StreakCard
+              label="Clean (all)"
+              count={cleanStreak}
+              accent="green"
+            />
+            <StreakCard
+              label="Workout"
+              count={workoutStreak}
+              accent="green"
+            />
+            {subStreaks.map((s) => (
+              <StreakCard key={s.label} label={s.label} count={s.count} />
             ))}
-          </ul>
-        )}
-      </section>
+          </div>
+        </section>
+
+        {/* Goals preview */}
+        <section className="lg:col-span-1">
+          <div className="mb-3 flex items-center justify-between px-0.5">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-300">
+              Goals
+            </h2>
+            <Link
+              href="/goals"
+              className="text-[10px] uppercase tracking-wider text-zinc-500 hover:text-zinc-300"
+            >
+              Manage →
+            </Link>
+          </div>
+          <div className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
+            <GoalRow
+              label="Weight"
+              primary={avg7 != null ? `${avg7.toFixed(1)} lbs` : "no weigh-ins"}
+              secondary={
+                avg7 != null
+                  ? `${(WEIGHT_START - avg7).toFixed(1)} lost · ${Math.max(0, avg7 - WEIGHT_TARGET).toFixed(1)} to go`
+                  : `target ${WEIGHT_TARGET} lbs`
+              }
+              pct={avg7 != null ? pct(WEIGHT_START - avg7, WEIGHT_START - WEIGHT_TARGET) : 0}
+            />
+            <GoalRow
+              label="Sales"
+              primary={fmtMoney(ytdRevenue)}
+              secondary={`${revenuePct.toFixed(1)}% to ${fmtMoney(REVENUE_MIN)}`}
+              pct={revenuePct}
+              tone="blue"
+            />
+            <GoalRow
+              label="Debt"
+              primary={`${fmtMoney(debtRemaining)} left`}
+              secondary={
+                debtTotal > 0
+                  ? `${debtPct.toFixed(1)}% paid of ${fmtMoney(debtTotal)}`
+                  : "No debts tracked"
+              }
+              pct={debtPct}
+              tone="amber"
+            />
+            <GoalRow
+              label="Savings"
+              primary={fmtMoney(savingsBalance)}
+              secondary={`${savingsPct.toFixed(1)}% of ${fmtMoney(SAVINGS_TARGET)}`}
+              pct={savingsPct}
+              tone="blue"
+            />
+          </div>
+        </section>
+
+        {/* Todos preview */}
+        <section className="lg:col-span-1">
+          <div className="mb-3 flex items-center justify-between px-0.5">
+            <h2 className="text-sm font-bold uppercase tracking-widest text-zinc-300">
+              Open todos
+            </h2>
+            <Link
+              href="/todos"
+              className="text-[10px] uppercase tracking-wider text-zinc-500 hover:text-zinc-300"
+            >
+              Manage →
+            </Link>
+          </div>
+          {todos.length === 0 ? (
+            <p className="rounded-2xl border border-zinc-800 bg-zinc-950 px-4 py-6 text-center text-sm text-zinc-500">
+              Nothing open. Clean slate.
+            </p>
+          ) : (
+            <ul className="space-y-1.5">
+              {todos.slice(0, 8).map((t) => (
+                <li
+                  key={t.id}
+                  className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-sm"
+                >
+                  <span className="flex-1 truncate">
+                    <span
+                      className={
+                        "mr-2 text-[10px] uppercase tracking-wider " +
+                        priorityColor(t.priority)
+                      }
+                    >
+                      {t.priority}
+                    </span>
+                    {t.title}
+                  </span>
+                  <span className="ml-2 text-[10px] uppercase tracking-wider text-zinc-500 shrink-0">
+                    {t.category}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

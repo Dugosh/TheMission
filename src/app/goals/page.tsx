@@ -104,8 +104,7 @@ export default async function GoalsPage() {
   // ---- Net worth ----
   const nwAsc = netWorthList.slice().reverse();
   const nwCurrent = latestNetWorth ? Number(latestNetWorth.amount) : null;
-  const nwFirst =
-    nwAsc.length > 0 ? Number(nwAsc[0].amount) : null;
+  const nwFirst = nwAsc.length > 0 ? Number(nwAsc[0].amount) : null;
   const nwYTDDelta =
     nwCurrent != null && nwFirst != null ? nwCurrent - nwFirst : null;
   const nwSparkPoints = nwAsc.map((s) => ({
@@ -114,245 +113,292 @@ export default async function GoalsPage() {
   }));
 
   return (
-    <div className="mx-auto max-w-2xl px-4 pt-6 pb-12 space-y-10">
-      <h1 className="text-3xl font-bold tracking-tight">Goals</h1>
+    <div className="mx-auto w-full max-w-7xl px-4 pt-16 pb-10 lg:px-8 lg:pt-8">
+      <h1 className="mb-6 text-3xl font-bold tracking-tight">Goals</h1>
 
-      {/* Weight */}
-      <section>
-        <SectionHeader title="Weight loss" tone="green" />
-        <Stat label="Start" value={`${WEIGHT_START} lbs`} />
-        <Stat label="Target" value={`${WEIGHT_TARGET} lbs`} />
-        <Stat
-          label="7-day avg"
-          value={avg7 != null ? `${avg7.toFixed(1)} lbs` : "—"}
-        />
-        <Stat
-          label="Lost"
-          value={
-            avg7 != null ? `${(WEIGHT_START - avg7).toFixed(1)} lbs` : "—"
-          }
-        />
-        <Stat
-          label="Remaining"
-          value={
-            avg7 != null
-              ? `${Math.max(0, avg7 - WEIGHT_TARGET).toFixed(1)} lbs`
-              : "—"
-          }
-        />
-        <Stat
-          label="Trend"
-          value={
-            projection.dailyRate < 0
-              ? `${(projection.dailyRate * 7).toFixed(2)} lbs/wk`
-              : projection.dailyRate > 0
-              ? "Gaining — recheck plan"
-              : "—"
-          }
-        />
-        <Stat label="Projected hit date" value={projection.etaDate ?? "—"} />
-        <Stat label="Deadline" value={WEIGHT_DEADLINE} />
-        <div className="mt-3">
-          <ProgressBar
-            pct={
-              avg7 != null
-                ? pct(WEIGHT_START - avg7, WEIGHT_START - WEIGHT_TARGET)
-                : 0
-            }
-            tone="green"
-          />
-        </div>
-      </section>
-
-      {/* Sales */}
-      <section>
-        <SectionHeader title="Sales · Gosian Media" tone="blue" />
-        <Stat label="YTD" value={fmtMoney(ytd)} />
-        <Stat label="Min target" value={fmtMoney(REVENUE_MIN)} />
-        <Stat label="Stretch target" value={fmtMoney(REVENUE_STRETCH)} />
-        <Stat
-          label="% to min"
-          value={`${pct(ytd, REVENUE_MIN).toFixed(1)}%`}
-        />
-        <Stat
-          label="% to stretch"
-          value={`${pct(ytd, REVENUE_STRETCH).toFixed(1)}%`}
-        />
-        <Stat label="Monthly run rate" value={fmtMoney(monthlyRunRate)} />
-        <Stat label="Projected year-end" value={fmtMoney(projectedYearEnd)} />
-        <div className="mt-3 mb-4">
-          <ProgressBar pct={pct(ytd, REVENUE_MIN)} tone="blue" />
-        </div>
-        <RevenueForm year={REVENUE_YEAR} entries={yearEntries} />
-      </section>
-
-      {/* Personal income */}
-      <section>
-        <SectionHeader title="Personal income · take-home" tone="green" />
-        <Stat label="YTD" value={fmtMoney(incomeYTD)} />
-        <Stat label="Monthly avg" value={fmtMoney(incomeMonthlyAvg)} />
-        <Stat label="Projected year-end" value={fmtMoney(incomeProjected)} />
-        <Stat
-          label="Months logged"
-          value={`${incomeMonthsLogged} of ${
-            new Date().getMonth() + 1
-          }`}
-        />
-        <div className="mt-4">
-          <IncomeForm year={REVENUE_YEAR} entries={incomeYear} />
-        </div>
-      </section>
-
-      {/* Debt */}
-      <section>
-        <SectionHeader title="Debt elimination" tone="amber" />
-        <DebtManager debts={debts} paidByDebtId={paidByDebtId} />
-        <div className="mt-4 border-t border-zinc-800 pt-4">
-          <Stat label="Total initial" value={fmtMoney(debtTotal)} />
-          <Stat label="Total paid" value={fmtMoney(debtPaid)} />
-          <Stat label="Total remaining" value={fmtMoney(debtRemaining)} />
+      {/* 2-column grid on desktop, single on mobile */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Weight */}
+        <Card>
+          <SectionHeader title="Weight loss" tone="green" />
+          <Stat label="Start" value={`${WEIGHT_START} lbs`} />
+          <Stat label="Target" value={`${WEIGHT_TARGET} lbs`} />
           <Stat
-            label="% eliminated"
-            value={`${pct(debtPaid, debtTotal).toFixed(1)}%`}
+            label="7-day avg"
+            value={avg7 != null ? `${avg7.toFixed(1)} lbs` : "—"}
           />
+          <Stat
+            label="Lost"
+            value={
+              avg7 != null ? `${(WEIGHT_START - avg7).toFixed(1)} lbs` : "—"
+            }
+          />
+          <Stat
+            label="Remaining"
+            value={
+              avg7 != null
+                ? `${Math.max(0, avg7 - WEIGHT_TARGET).toFixed(1)} lbs`
+                : "—"
+            }
+          />
+          <Stat
+            label="Trend"
+            value={
+              projection.dailyRate < 0
+                ? `${(projection.dailyRate * 7).toFixed(2)} lbs/wk`
+                : projection.dailyRate > 0
+                ? "Gaining — recheck plan"
+                : "—"
+            }
+          />
+          <Stat
+            label="Projected hit date"
+            value={projection.etaDate ?? "—"}
+          />
+          <Stat label="Deadline" value={WEIGHT_DEADLINE} />
           <div className="mt-3">
-            <ProgressBar pct={pct(debtPaid, debtTotal)} tone="amber" />
+            <ProgressBar
+              pct={
+                avg7 != null
+                  ? pct(WEIGHT_START - avg7, WEIGHT_START - WEIGHT_TARGET)
+                  : 0
+              }
+              tone="green"
+            />
           </div>
-        </div>
+        </Card>
 
-        <div className="mt-6">
-          <DebtForm debts={debts} />
-        </div>
-
-        {payments.length > 0 && (
-          <div className="mt-6">
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-              Recent payments
-            </h3>
-            <ul className="space-y-1 text-sm">
-              {payments.slice(0, 10).map((p) => {
-                const d = debts.find((x) => x.id === p.debt_id);
-                return (
-                  <li
-                    key={p.id}
-                    className="flex justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2"
-                  >
-                    <span>
-                      <span className="mr-2 text-zinc-500 tabular-nums">
-                        {p.date}
-                      </span>
-                      {d?.name ?? "(archived debt)"}
-                    </span>
-                    <span className="tabular-nums">
-                      {fmtMoney(Number(p.amount))}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
-      </section>
-
-      {/* Savings */}
-      <section>
-        <SectionHeader title="Cash savings" tone="blue" />
-        <Stat label="Current balance" value={fmtMoney(savingsBalance)} />
-        <Stat label="Target" value={fmtMoney(SAVINGS_TARGET)} />
-        <Stat
-          label="Remaining"
-          value={fmtMoney(Math.max(0, SAVINGS_TARGET - savingsBalance))}
-        />
-        <Stat
-          label="% to goal"
-          value={`${pct(savingsBalance, SAVINGS_TARGET).toFixed(1)}%`}
-        />
-        <div className="mt-3 mb-4">
-          <ProgressBar
-            pct={pct(savingsBalance, SAVINGS_TARGET)}
-            tone="blue"
+        {/* Sales */}
+        <Card>
+          <SectionHeader title="Sales · Gosian Media" tone="blue" />
+          <Stat label="YTD" value={fmtMoney(ytd)} />
+          <Stat label="Min target" value={fmtMoney(REVENUE_MIN)} />
+          <Stat label="Stretch target" value={fmtMoney(REVENUE_STRETCH)} />
+          <Stat
+            label="% to min"
+            value={`${pct(ytd, REVENUE_MIN).toFixed(1)}%`}
           />
-        </div>
-        <SavingsForm />
-        {savingsList.length > 0 && (
-          <ul className="mt-4 space-y-1 text-sm">
-            {savingsList.slice(0, 6).map((s) => (
-              <li
-                key={s.id}
-                className="flex justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2"
-              >
-                <span className="text-zinc-500 tabular-nums">{s.date}</span>
-                <span className="tabular-nums">
-                  {fmtMoney(Number(s.balance))}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+          <Stat
+            label="% to stretch"
+            value={`${pct(ytd, REVENUE_STRETCH).toFixed(1)}%`}
+          />
+          <Stat
+            label="Monthly run rate"
+            value={fmtMoney(monthlyRunRate)}
+          />
+          <Stat
+            label="Projected year-end"
+            value={fmtMoney(projectedYearEnd)}
+          />
+          <div className="mt-3 mb-4">
+            <ProgressBar pct={pct(ytd, REVENUE_MIN)} tone="blue" />
+          </div>
+          <RevenueForm year={REVENUE_YEAR} entries={yearEntries} />
+        </Card>
 
-      {/* Net worth */}
-      <section>
-        <SectionHeader title="Net worth" tone="green" />
-        <Stat
-          label="Current"
-          value={nwCurrent != null ? fmtMoney(nwCurrent) : "—"}
-        />
-        <Stat
-          label="First snapshot"
-          value={nwFirst != null ? fmtMoney(nwFirst) : "—"}
-        />
-        <Stat
-          label="Δ since first"
-          value={
-            nwYTDDelta != null
-              ? `${nwYTDDelta >= 0 ? "+" : ""}${fmtMoney(nwYTDDelta)}`
-              : "—"
-          }
-        />
-        <Stat
-          label="Last updated"
-          value={latestNetWorth?.date ?? "—"}
-        />
+        {/* Personal income */}
+        <Card>
+          <SectionHeader title="Personal income · take-home" tone="green" />
+          <Stat label="YTD" value={fmtMoney(incomeYTD)} />
+          <Stat label="Monthly avg" value={fmtMoney(incomeMonthlyAvg)} />
+          <Stat
+            label="Projected year-end"
+            value={fmtMoney(incomeProjected)}
+          />
+          <Stat
+            label="Months logged"
+            value={`${incomeMonthsLogged} of ${
+              new Date().getMonth() + 1
+            }`}
+          />
+          <div className="mt-4">
+            <IncomeForm year={REVENUE_YEAR} entries={incomeYear} />
+          </div>
+        </Card>
 
-        <div className="mt-4">
-          {nwSparkPoints.length >= 2 ? (
-            <Sparkline points={nwSparkPoints} color="52,211,153" />
-          ) : (
-            <p className="rounded-xl border border-dashed border-zinc-800 px-4 py-6 text-center text-xs text-zinc-600">
-              Add at least 2 snapshots to chart your trend
+        {/* Net worth */}
+        <Card>
+          <SectionHeader title="Net worth" tone="green" />
+          <Stat
+            label="Current"
+            value={nwCurrent != null ? fmtMoney(nwCurrent) : "—"}
+          />
+          <Stat
+            label="First snapshot"
+            value={nwFirst != null ? fmtMoney(nwFirst) : "—"}
+          />
+          <Stat
+            label="Δ since first"
+            value={
+              nwYTDDelta != null
+                ? `${nwYTDDelta >= 0 ? "+" : ""}${fmtMoney(nwYTDDelta)}`
+                : "—"
+            }
+          />
+          <Stat label="Last updated" value={latestNetWorth?.date ?? "—"} />
+
+          <div className="mt-4">
+            {nwSparkPoints.length >= 2 ? (
+              <Sparkline points={nwSparkPoints} color="52,211,153" />
+            ) : (
+              <p className="rounded-xl border border-dashed border-zinc-800 px-4 py-6 text-center text-xs text-zinc-600">
+                Add at least 2 snapshots to chart your trend
+              </p>
+            )}
+          </div>
+
+          <div className="mt-4">
+            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+              Add snapshot
+            </h3>
+            <NetWorthForm />
+            <p className="mt-2 text-[11px] text-zinc-500">
+              Calculate as: total assets (savings + investments + home equity) −
+              total liabilities (debts).
             </p>
+          </div>
+
+          {netWorthList.length > 0 && (
+            <ul className="mt-4 space-y-1 text-sm">
+              {netWorthList.slice(0, 5).map((s) => (
+                <li
+                  key={s.id}
+                  className="flex justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2"
+                >
+                  <span className="text-zinc-500 tabular-nums">{s.date}</span>
+                  <span className="tabular-nums font-medium">
+                    {fmtMoney(Number(s.amount))}
+                  </span>
+                </li>
+              ))}
+            </ul>
           )}
+        </Card>
+
+        {/* Debt — full width */}
+        <div className="lg:col-span-2">
+          <Card>
+            <SectionHeader title="Debt elimination" tone="amber" />
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div>
+                <DebtManager debts={debts} paidByDebtId={paidByDebtId} />
+                <div className="mt-4 border-t border-zinc-800 pt-4">
+                  <Stat label="Total initial" value={fmtMoney(debtTotal)} />
+                  <Stat label="Total paid" value={fmtMoney(debtPaid)} />
+                  <Stat
+                    label="Total remaining"
+                    value={fmtMoney(debtRemaining)}
+                  />
+                  <Stat
+                    label="% eliminated"
+                    value={`${pct(debtPaid, debtTotal).toFixed(1)}%`}
+                  />
+                  <div className="mt-3">
+                    <ProgressBar pct={pct(debtPaid, debtTotal)} tone="amber" />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <DebtForm debts={debts} />
+                {payments.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+                      Recent payments
+                    </h3>
+                    <ul className="space-y-1 text-sm">
+                      {payments.slice(0, 10).map((p) => {
+                        const d = debts.find((x) => x.id === p.debt_id);
+                        return (
+                          <li
+                            key={p.id}
+                            className="flex justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2"
+                          >
+                            <span>
+                              <span className="mr-2 text-zinc-500 tabular-nums">
+                                {p.date}
+                              </span>
+                              {d?.name ?? "(archived debt)"}
+                            </span>
+                            <span className="tabular-nums">
+                              {fmtMoney(Number(p.amount))}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Card>
         </div>
 
-        <div className="mt-4">
-          <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-            Add snapshot
-          </h3>
-          <NetWorthForm />
-          <p className="mt-2 text-[11px] text-zinc-500">
-            Calculate as: total assets (savings + investments + home equity) −
-            total liabilities (debts).
-          </p>
+        {/* Savings */}
+        <div className="lg:col-span-2">
+          <Card>
+            <SectionHeader title="Cash savings" tone="blue" />
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div>
+                <Stat
+                  label="Current balance"
+                  value={fmtMoney(savingsBalance)}
+                />
+                <Stat label="Target" value={fmtMoney(SAVINGS_TARGET)} />
+                <Stat
+                  label="Remaining"
+                  value={fmtMoney(
+                    Math.max(0, SAVINGS_TARGET - savingsBalance)
+                  )}
+                />
+                <Stat
+                  label="% to goal"
+                  value={`${pct(savingsBalance, SAVINGS_TARGET).toFixed(1)}%`}
+                />
+                <div className="mt-3 mb-4">
+                  <ProgressBar
+                    pct={pct(savingsBalance, SAVINGS_TARGET)}
+                    tone="blue"
+                  />
+                </div>
+                <SavingsForm />
+              </div>
+              <div>
+                {savingsList.length > 0 ? (
+                  <ul className="space-y-1 text-sm">
+                    {savingsList.slice(0, 10).map((s) => (
+                      <li
+                        key={s.id}
+                        className="flex justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2"
+                      >
+                        <span className="text-zinc-500 tabular-nums">
+                          {s.date}
+                        </span>
+                        <span className="tabular-nums">
+                          {fmtMoney(Number(s.balance))}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="rounded-xl border border-dashed border-zinc-800 px-4 py-6 text-center text-xs text-zinc-600">
+                    No snapshots yet
+                  </p>
+                )}
+              </div>
+            </div>
+          </Card>
         </div>
-
-        {netWorthList.length > 0 && (
-          <ul className="mt-4 space-y-1 text-sm">
-            {netWorthList.slice(0, 6).map((s) => (
-              <li
-                key={s.id}
-                className="flex justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2"
-              >
-                <span className="text-zinc-500 tabular-nums">{s.date}</span>
-                <span className="tabular-nums font-medium">
-                  {fmtMoney(Number(s.amount))}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+      </div>
     </div>
+  );
+}
+
+function Card({ children }: { children: React.ReactNode }) {
+  return (
+    <section className="rounded-2xl border border-zinc-800/80 bg-gradient-to-br from-zinc-900/40 to-zinc-950 p-5">
+      {children}
+    </section>
   );
 }
 
