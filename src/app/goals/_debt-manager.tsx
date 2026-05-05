@@ -1,14 +1,33 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Trash2, Pencil, Plus, X, Check } from "lucide-react";
+import { useEffect, useState, useTransition } from "react";
+import { Trash2, Pencil, Plus, X, Check, GripVertical } from "lucide-react";
 import { Debt } from "@/lib/types";
 import {
   createDebt,
   updateDebt,
   archiveDebt,
+  reorderDebts,
 } from "@/app/actions/goals";
 import { fmtMoney } from "@/lib/calc";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 type Props = {
   debts: Debt[];
@@ -18,6 +37,30 @@ type Props = {
 export default function DebtManager({ debts, paidByDebtId }: Props) {
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  // Local optimistic order — keeps drag results visible during server round-trip.
+  const [order, setOrder] = useState<Debt[]>(debts);
+
+  // Re-sync if the server list changes (add/edit/archive/refresh).
+  useEffect(() => {
+    setOrder(debts);
+  }, [debts]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  function handleDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const oldIdx = order.findIndex((d) => d.id === active.id);
+    const newIdx = order.findIndex((d) => d.id === over.id);
+    if (oldIdx === -1 || newIdx === -1) return;
+    const next = arrayMove(order, oldIdx, newIdx);
+    setOrder(next); // optimistic
+    void reorderDebts(next.map((d) => d.id));
+  }
 
   return (
     <div className="space-y-3">
@@ -37,61 +80,124 @@ export default function DebtManager({ debts, paidByDebtId }: Props) {
 
       {adding && <AddDebtForm onDone={() => setAdding(false)} />}
 
-      <ul className="space-y-2">
-        {debts.map((d) => {
-          const paid = paidByDebtId[d.id] ?? 0;
-          const remaining = Math.max(0, Number(d.initial_balance) - paid);
-          const pctPaid =
-            d.initial_balance > 0
-              ? Math.min(100, (paid / Number(d.initial_balance)) * 100)
-              : 0;
-          return (
-            <li
-              key={d.id}
-              className="rounded-xl border border-zinc-800 bg-zinc-950 p-3"
-            >
-              {editingId === d.id ? (
-                <EditDebtForm
-                  debt={d}
-                  onDone={() => setEditingId(null)}
-                />
-              ) : (
-                <>
-                  <div className="mb-2 flex items-start justify-between gap-2">
-                    <div>
-                      <div className="font-medium">{d.name}</div>
-                      <div className="text-xs text-zinc-500">
-                        {fmtMoney(Number(d.initial_balance))} initial ·{" "}
-                        {fmtMoney(remaining)} left
-                      </div>
-                    </div>
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => setEditingId(d.id)}
-                        className="rounded p-1.5 text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <ArchiveButton debt={d} />
-                    </div>
-                  </div>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-900">
-                    <div
-                      className="h-full bg-amber-500 transition-all"
-                      style={{ width: `${pctPaid}%` }}
-                    />
-                  </div>
-                  <div className="mt-1 flex justify-between text-[11px] text-zinc-500">
-                    <span>{fmtMoney(paid)} paid</span>
-                    <span>{pctPaid.toFixed(1)}%</span>
-                  </div>
-                </>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={order.map((d) => d.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <ul className="space-y-2">
+            {order.map((d) => (
+              <SortableDebtItem
+                key={d.id}
+                debt={d}
+                paid={paidByDebtId[d.id] ?? 0}
+                editing={editingId === d.id}
+                onStartEdit={() => setEditingId(d.id)}
+                onCancelEdit={() => setEditingId(null)}
+              />
+            ))}
+          </ul>
+        </SortableContext>
+      </DndContext>
     </div>
+  );
+}
+
+function SortableDebtItem({
+  debt,
+  paid,
+  editing,
+  onStartEdit,
+  onCancelEdit,
+}: {
+  debt: Debt;
+  paid: number;
+  editing: boolean;
+  onStartEdit: () => void;
+  onCancelEdit: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: debt.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+    zIndex: isDragging ? 10 : "auto" as const,
+  };
+
+  const remaining = Math.max(0, Number(debt.initial_balance) - paid);
+  const pctPaid =
+    debt.initial_balance > 0
+      ? Math.min(100, (paid / Number(debt.initial_balance)) * 100)
+      : 0;
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={style}
+      className={`rounded-xl border bg-zinc-950 p-3 ${
+        isDragging
+          ? "border-zinc-500 shadow-lg shadow-black/40"
+          : "border-zinc-800"
+      }`}
+    >
+      {editing ? (
+        <EditDebtForm debt={debt} onDone={onCancelEdit} />
+      ) : (
+        <>
+          <div className="mb-2 flex items-start justify-between gap-2">
+            <div className="flex items-start gap-2 min-w-0">
+              <button
+                type="button"
+                aria-label="Drag to reorder"
+                className="-ml-1 mt-0.5 cursor-grab touch-none rounded p-1 text-zinc-600 hover:bg-zinc-900 hover:text-zinc-300 active:cursor-grabbing"
+                {...attributes}
+                {...listeners}
+              >
+                <GripVertical size={16} />
+              </button>
+              <div className="min-w-0">
+                <div className="font-medium truncate">{debt.name}</div>
+                <div className="text-xs text-zinc-500">
+                  {fmtMoney(Number(debt.initial_balance))} initial ·{" "}
+                  {fmtMoney(remaining)} left
+                </div>
+              </div>
+            </div>
+            <div className="flex shrink-0 gap-1">
+              <button
+                onClick={onStartEdit}
+                className="rounded p-1.5 text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200"
+              >
+                <Pencil size={14} />
+              </button>
+              <ArchiveButton debt={debt} />
+            </div>
+          </div>
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-900">
+            <div
+              className="h-full bg-amber-500 transition-all"
+              style={{ width: `${pctPaid}%` }}
+            />
+          </div>
+          <div className="mt-1 flex justify-between text-[11px] text-zinc-500">
+            <span>{fmtMoney(paid)} paid</span>
+            <span>{pctPaid.toFixed(1)}%</span>
+          </div>
+        </>
+      )}
+    </li>
   );
 }
 

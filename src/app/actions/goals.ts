@@ -91,6 +91,21 @@ export async function archiveDebt(id: string) {
   revalidatePath("/");
 }
 
+export async function reorderDebts(orderedIds: string[]) {
+  if (!orderedIds.length) return;
+  const supabase = getSupabase();
+  // Update each debt's display_order to its new index. Run in parallel.
+  const updates = orderedIds.map((id, idx) =>
+    supabase.from("debts").update({ display_order: idx }).eq("id", id)
+  );
+  const results = await Promise.all(updates);
+  for (const r of results) {
+    if (r.error) throw new Error(r.error.message);
+  }
+  revalidatePath("/goals");
+  revalidatePath("/");
+}
+
 export async function listDebtPayments(): Promise<DebtPayment[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase
