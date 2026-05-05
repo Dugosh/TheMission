@@ -7,7 +7,7 @@ import { todayISO, isAllClean, streak } from "@/lib/calc";
 import { DailyLog } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "Protocol",
+  title: "Mission Board",
   description: "Daily habit + goal tracker",
 };
 

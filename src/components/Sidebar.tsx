@@ -83,8 +83,8 @@ export default function Sidebar({ cleanStreak }: Props) {
         <div className="flex h-16 items-center justify-between border-b border-zinc-900 px-5">
           <Link href="/" className="flex items-center gap-2">
             <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(52,211,153,0.6)]" />
-            <span className="text-sm font-bold uppercase tracking-[0.25em]">
-              Protocol
+            <span className="text-sm font-bold uppercase tracking-[0.18em]">
+              Mission Board
             </span>
           </Link>
           <button
