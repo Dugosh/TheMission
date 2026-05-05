@@ -50,6 +50,7 @@ export async function listDebts(): Promise<Debt[]> {
 export async function createDebt(input: {
   name: string;
   initial_balance: number;
+  category?: string;
 }) {
   const supabase = getSupabase();
   const { data: maxRow } = await supabase
@@ -62,6 +63,7 @@ export async function createDebt(input: {
   const { error } = await supabase.from("debts").insert({
     name: input.name.trim(),
     initial_balance: input.initial_balance,
+    category: input.category ?? "Other",
     display_order: nextOrder,
   });
   if (error) throw new Error(error.message);
@@ -71,7 +73,7 @@ export async function createDebt(input: {
 
 export async function updateDebt(
   id: string,
-  patch: { name?: string; initial_balance?: number }
+  patch: { name?: string; initial_balance?: number; category?: string }
 ) {
   const supabase = getSupabase();
   const { error } = await supabase.from("debts").update(patch).eq("id", id);

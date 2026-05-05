@@ -1,8 +1,16 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { Trash2, Pencil, Plus, X, Check, GripVertical } from "lucide-react";
-import { Debt } from "@/lib/types";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import {
+  Trash2,
+  Pencil,
+  Plus,
+  X,
+  Check,
+  GripVertical,
+  ChevronDown,
+} from "lucide-react";
+import { Debt, DEBT_CATEGORIES, DebtCategory } from "@/lib/types";
 import {
   createDebt,
   updateDebt,
@@ -37,33 +45,37 @@ type Props = {
 export default function DebtManager({ debts, paidByDebtId }: Props) {
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  // Local optimistic order — keeps drag results visible during server round-trip.
   const [order, setOrder] = useState<Debt[]>(debts);
+  const [collapsed, setCollapsed] = useState<Set<DebtCategory>>(new Set());
 
-  // Re-sync if the server list changes (add/edit/archive/refresh).
   useEffect(() => {
     setOrder(debts);
   }, [debts]);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
+  // Group debts by category, in the canonical category order.
+  const grouped = useMemo(() => {
+    const map = new Map<DebtCategory, Debt[]>();
+    for (const cat of DEBT_CATEGORIES) map.set(cat, []);
+    for (const d of order) {
+      const cat = (DEBT_CATEGORIES as readonly string[]).includes(d.category)
+        ? d.category
+        : ("Other" as DebtCategory);
+      map.get(cat)!.push(d);
+    }
+    return Array.from(map.entries()).filter(([, items]) => items.length > 0);
+  }, [order]);
 
-  function handleDragEnd(e: DragEndEvent) {
-    const { active, over } = e;
-    if (!over || active.id === over.id) return;
-    const oldIdx = order.findIndex((d) => d.id === active.id);
-    const newIdx = order.findIndex((d) => d.id === over.id);
-    if (oldIdx === -1 || newIdx === -1) return;
-    const next = arrayMove(order, oldIdx, newIdx);
-    setOrder(next); // optimistic
-    void reorderDebts(next.map((d) => d.id));
+  function toggleCollapse(cat: DebtCategory) {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
+      return next;
+    });
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold uppercase tracking-wider text-zinc-400">
           Accounts
@@ -80,29 +92,182 @@ export default function DebtManager({ debts, paidByDebtId }: Props) {
 
       {adding && <AddDebtForm onDone={() => setAdding(false)} />}
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
+      <div className="space-y-3">
+        {grouped.map(([cat, items]) => {
+          const subtotalInitial = items.reduce(
+            (s, d) => s + Number(d.initial_balance),
+            0
+          );
+          const subtotalPaid = items.reduce(
+            (s, d) => s + (paidByDebtId[d.id] ?? 0),
+            0
+          );
+          const subtotalRemaining = Math.max(
+            0,
+            subtotalInitial - subtotalPaid
+          );
+          const isCollapsed = collapsed.has(cat);
+          return (
+            <CategoryGroup
+              key={cat}
+              category={cat}
+              items={items}
+              isCollapsed={isCollapsed}
+              onToggle={() => toggleCollapse(cat)}
+              subtotalInitial={subtotalInitial}
+              subtotalPaid={subtotalPaid}
+              subtotalRemaining={subtotalRemaining}
+              paidByDebtId={paidByDebtId}
+              editingId={editingId}
+              setEditingId={setEditingId}
+              setOrder={setOrder}
+              order={order}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CategoryGroup({
+  category,
+  items,
+  isCollapsed,
+  onToggle,
+  subtotalInitial,
+  subtotalPaid,
+  subtotalRemaining,
+  paidByDebtId,
+  editingId,
+  setEditingId,
+  setOrder,
+  order,
+}: {
+  category: DebtCategory;
+  items: Debt[];
+  isCollapsed: boolean;
+  onToggle: () => void;
+  subtotalInitial: number;
+  subtotalPaid: number;
+  subtotalRemaining: number;
+  paidByDebtId: Record<string, number>;
+  editingId: string | null;
+  setEditingId: (id: string | null) => void;
+  setOrder: React.Dispatch<React.SetStateAction<Debt[]>>;
+  order: Debt[];
+}) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 150, tolerance: 6 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  function handleDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const ids = items.map((i) => i.id);
+    if (!ids.includes(String(over.id))) return; // dragged outside this group, ignore
+
+    // Compute new global order: move within this category's slice
+    const oldIdxLocal = items.findIndex((d) => d.id === active.id);
+    const newIdxLocal = items.findIndex((d) => d.id === over.id);
+    if (oldIdxLocal === -1 || newIdxLocal === -1) return;
+    const newLocal = arrayMove(items, oldIdxLocal, newIdxLocal);
+
+    // Rebuild global order: replace the items in this category with the
+    // reordered list, preserving everything else.
+    const otherItems = order.filter((d) => d.category !== category);
+    const next = [...otherItems, ...newLocal].sort((a, b) => {
+      // Keep canonical category order, then position within category.
+      const aCat = DEBT_CATEGORIES.indexOf(a.category);
+      const bCat = DEBT_CATEGORIES.indexOf(b.category);
+      if (aCat !== bCat) return aCat - bCat;
+      // Same category — for the just-reordered one, use newLocal index.
+      // Other categories preserve their existing relative order via display_order.
+      if (a.category === category) {
+        return newLocal.indexOf(a) - newLocal.indexOf(b);
+      }
+      return a.display_order - b.display_order;
+    });
+    setOrder(next);
+    void reorderDebts(next.map((d) => d.id));
+  }
+
+  const pctPaid =
+    subtotalInitial > 0 ? Math.min(100, (subtotalPaid / subtotalInitial) * 100) : 0;
+
+  return (
+    <div className="rounded-xl border border-zinc-800 bg-black/40">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-zinc-950/60"
       >
-        <SortableContext
-          items={order.map((d) => d.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          <ul className="space-y-2">
-            {order.map((d) => (
-              <SortableDebtItem
-                key={d.id}
-                debt={d}
-                paid={paidByDebtId[d.id] ?? 0}
-                editing={editingId === d.id}
-                onStartEdit={() => setEditingId(d.id)}
-                onCancelEdit={() => setEditingId(null)}
-              />
-            ))}
-          </ul>
-        </SortableContext>
-      </DndContext>
+        <div className="flex items-center gap-2">
+          <ChevronDown
+            size={16}
+            className={`text-zinc-500 transition-transform ${
+              isCollapsed ? "-rotate-90" : ""
+            }`}
+          />
+          <span className="text-sm font-semibold uppercase tracking-wider text-zinc-200">
+            {category}
+          </span>
+          <span className="rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] font-semibold text-zinc-400">
+            {items.length}
+          </span>
+        </div>
+        <div className="flex items-center gap-3 text-xs">
+          <span className="text-zinc-500 tabular-nums">
+            {fmtMoney(subtotalRemaining)} left
+          </span>
+          <span className="text-amber-400 tabular-nums">
+            {pctPaid.toFixed(0)}%
+          </span>
+        </div>
+      </button>
+
+      <div className="px-3 pb-1">
+        <div className="h-1 w-full overflow-hidden rounded-full bg-zinc-900">
+          <div
+            className="h-full bg-amber-500/70 transition-all"
+            style={{ width: `${pctPaid}%` }}
+          />
+        </div>
+      </div>
+
+      {!isCollapsed && (
+        <div className="px-3 pb-3 pt-2">
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={items.map((d) => d.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <ul className="space-y-2">
+                {items.map((d) => (
+                  <SortableDebtItem
+                    key={d.id}
+                    debt={d}
+                    paid={paidByDebtId[d.id] ?? 0}
+                    editing={editingId === d.id}
+                    onStartEdit={() => setEditingId(d.id)}
+                    onCancelEdit={() => setEditingId(null)}
+                  />
+                ))}
+              </ul>
+            </SortableContext>
+          </DndContext>
+        </div>
+      )}
     </div>
   );
 }
@@ -133,7 +298,7 @@ function SortableDebtItem({
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.6 : 1,
-    zIndex: isDragging ? 10 : "auto" as const,
+    zIndex: isDragging ? 10 : ("auto" as const),
   };
 
   const remaining = Math.max(0, Number(debt.initial_balance) - paid);
@@ -201,9 +366,32 @@ function SortableDebtItem({
   );
 }
 
+function CategorySelect({
+  value,
+  onChange,
+}: {
+  value: DebtCategory;
+  onChange: (c: DebtCategory) => void;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value as DebtCategory)}
+      className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none"
+    >
+      {DEBT_CATEGORIES.map((c) => (
+        <option key={c} value={c}>
+          {c}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 function AddDebtForm({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState("");
   const [bal, setBal] = useState("");
+  const [category, setCategory] = useState<DebtCategory>("Credit Card");
   const [pending, start] = useTransition();
 
   function submit(e: React.FormEvent) {
@@ -211,7 +399,11 @@ function AddDebtForm({ onDone }: { onDone: () => void }) {
     const n = parseFloat(bal.replace(/[$,]/g, ""));
     if (!name.trim() || isNaN(n) || n < 0) return;
     start(async () => {
-      await createDebt({ name: name.trim(), initial_balance: n });
+      await createDebt({
+        name: name.trim(),
+        initial_balance: n,
+        category,
+      });
       setName("");
       setBal("");
       onDone();
@@ -239,6 +431,7 @@ function AddDebtForm({ onDone }: { onDone: () => void }) {
         placeholder="$ initial balance"
         className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none"
       />
+      <CategorySelect value={category} onChange={setCategory} />
       <button
         type="submit"
         disabled={pending || !name.trim() || !bal}
@@ -259,6 +452,7 @@ function EditDebtForm({
 }) {
   const [name, setName] = useState(debt.name);
   const [bal, setBal] = useState(String(debt.initial_balance));
+  const [category, setCategory] = useState<DebtCategory>(debt.category);
   const [pending, start] = useTransition();
 
   function save() {
@@ -268,6 +462,7 @@ function EditDebtForm({
       await updateDebt(debt.id, {
         name: name.trim(),
         initial_balance: n,
+        category,
       });
       onDone();
     });
@@ -287,6 +482,7 @@ function EditDebtForm({
         onChange={(e) => setBal(e.target.value)}
         className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm focus:border-zinc-500 focus:outline-none"
       />
+      <CategorySelect value={category} onChange={setCategory} />
       <div className="flex gap-2">
         <button
           type="button"

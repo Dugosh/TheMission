@@ -63,12 +63,24 @@ export type RevenueEntry = {
   amount: number;
 };
 
+export const DEBT_CATEGORIES = [
+  "Credit Card",
+  "Auto Loan",
+  "Student Loan",
+  "Tax",
+  "Medical",
+  "Personal Loan",
+  "Other",
+] as const;
+export type DebtCategory = (typeof DEBT_CATEGORIES)[number];
+
 export type Debt = {
   id: string;
   name: string;
   initial_balance: number;
   display_order: number;
   archived: boolean;
+  category: DebtCategory;
 };
 
 export type DebtPayment = {
