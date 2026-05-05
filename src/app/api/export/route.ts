@@ -23,26 +23,29 @@ export async function GET() {
     { data: debts },
     { data: payments },
     { data: savings },
+    { data: income },
+    { data: netWorth },
     { data: todos },
-    { data: state },
   ] = await Promise.all([
     sb.from("daily_logs").select("*").order("date"),
     sb.from("revenue_entries").select("*").order("month"),
     sb.from("debts").select("*").order("display_order"),
     sb.from("debt_payments").select("*").order("date"),
     sb.from("savings_snapshots").select("*").order("date"),
+    sb.from("personal_income_entries").select("*").order("month"),
+    sb.from("net_worth_snapshots").select("*").order("date"),
     sb.from("todos").select("*").order("created_at"),
-    sb.from("goals_state").select("*").eq("id", 1),
   ]);
 
   const parts: string[] = [];
   parts.push("# DAILY_LOGS\n" + toCsv(logs ?? []));
-  parts.push("\n\n# REVENUE_ENTRIES\n" + toCsv(revenue ?? []));
+  parts.push("\n\n# SALES (revenue_entries)\n" + toCsv(revenue ?? []));
   parts.push("\n\n# DEBTS\n" + toCsv(debts ?? []));
   parts.push("\n\n# DEBT_PAYMENTS\n" + toCsv(payments ?? []));
   parts.push("\n\n# SAVINGS_SNAPSHOTS\n" + toCsv(savings ?? []));
+  parts.push("\n\n# PERSONAL_INCOME\n" + toCsv(income ?? []));
+  parts.push("\n\n# NET_WORTH_SNAPSHOTS\n" + toCsv(netWorth ?? []));
   parts.push("\n\n# TODOS\n" + toCsv(todos ?? []));
-  parts.push("\n\n# GOALS_STATE\n" + toCsv(state ?? []));
   const body = parts.join("");
   const today = new Date().toISOString().slice(0, 10);
   return new Response(body, {

@@ -6,9 +6,12 @@ import {
   Debt,
   DebtPayment,
   SavingsSnapshot,
-  GoalsState,
+  PersonalIncomeEntry,
+  NetWorthSnapshot,
 } from "@/lib/types";
 import { revalidatePath } from "next/cache";
+
+// ---- Sales (revenue_entries) ----
 
 export async function listRevenue(): Promise<RevenueEntry[]> {
   const supabase = getSupabase();
@@ -49,7 +52,6 @@ export async function createDebt(input: {
   initial_balance: number;
 }) {
   const supabase = getSupabase();
-  // Compute next display_order
   const { data: maxRow } = await supabase
     .from("debts")
     .select("display_order")
@@ -153,25 +155,67 @@ export async function addSavingsSnapshot(date: string, balance: number) {
   revalidatePath("/");
 }
 
-// ---- Goals state ----
+// ---- Personal income ----
 
-export async function getGoalsState(): Promise<GoalsState> {
+export async function listPersonalIncome(): Promise<PersonalIncomeEntry[]> {
   const supabase = getSupabase();
   const { data, error } = await supabase
-    .from("goals_state")
+    .from("personal_income_entries")
     .select("*")
-    .eq("id", 1)
-    .single();
+    .order("month", { ascending: true });
   if (error) throw new Error(error.message);
-  return data as GoalsState;
+  return (data || []) as PersonalIncomeEntry[];
 }
 
-export async function updateGoalsState(patch: Partial<GoalsState>) {
+export async function upsertPersonalIncome(month: string, amount: number) {
   const supabase = getSupabase();
   const { error } = await supabase
-    .from("goals_state")
-    .update({ ...patch, updated_at: new Date().toISOString() })
-    .eq("id", 1);
+    .from("personal_income_entries")
+    .upsert({ month, amount }, { onConflict: "month" });
+  if (error) throw new Error(error.message);
+  revalidatePath("/goals");
+}
+
+// ---- Net worth ----
+
+export async function listNetWorth(): Promise<NetWorthSnapshot[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("net_worth_snapshots")
+    .select("*")
+    .order("date", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data || []) as NetWorthSnapshot[];
+}
+
+export async function getLatestNetWorth(): Promise<NetWorthSnapshot | null> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("net_worth_snapshots")
+    .select("*")
+    .order("date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data as NetWorthSnapshot | null;
+}
+
+export async function addNetWorthSnapshot(date: string, amount: number) {
+  const supabase = getSupabase();
+  const { error } = await supabase
+    .from("net_worth_snapshots")
+    .insert({ date, amount });
+  if (error) throw new Error(error.message);
+  revalidatePath("/goals");
+  revalidatePath("/");
+}
+
+export async function deleteNetWorthSnapshot(id: string) {
+  const supabase = getSupabase();
+  const { error } = await supabase
+    .from("net_worth_snapshots")
+    .delete()
+    .eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/goals");
 }
