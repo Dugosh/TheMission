@@ -200,6 +200,32 @@ export async function deleteContribution(id: string) {
   revalidatePath("/");
 }
 
+export async function updateContribution(
+  id: string,
+  patch: {
+    date?: string;
+    cash_amount?: number;
+    invested_amount?: number;
+    notes?: string | null;
+  }
+) {
+  const supabase = getSupabase();
+  // Normalize empty notes to null for tidy DB.
+  const cleanPatch = {
+    ...patch,
+    ...(patch.notes !== undefined
+      ? { notes: patch.notes && patch.notes.trim() ? patch.notes.trim() : null }
+      : {}),
+  };
+  const { error } = await supabase
+    .from("wealth_contributions")
+    .update(cleanPatch)
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/goals");
+  revalidatePath("/");
+}
+
 // Back-compat aliases — older imports/components still use these names.
 export const getLatestSavings = async () => {
   const t = await getWealthTotals();

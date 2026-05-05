@@ -29,6 +29,7 @@ import RevenueForm from "./_revenue-form";
 import DebtForm from "./_debt-form";
 import DebtManager from "./_debt-manager";
 import SavingsForm from "./_savings-form";
+import ContributionsList from "./_contributions-list";
 
 export const dynamic = "force-dynamic";
 
@@ -244,50 +245,7 @@ export default async function GoalsPage() {
                 <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
                   Recent contributions
                 </h3>
-                {contributions.length > 0 ? (
-                  <ul className="space-y-1 text-sm">
-                    {contributions.slice(0, 10).map((s) => {
-                      const cash = Number(s.cash_amount);
-                      const inv = Number(s.invested_amount);
-                      return (
-                        <li
-                          key={s.id}
-                          className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2"
-                        >
-                          <div className="flex justify-between">
-                            <span className="text-zinc-500 tabular-nums">
-                              {s.date}
-                            </span>
-                            <span className="tabular-nums">
-                              {cash > 0 && (
-                                <span className="text-blue-400">
-                                  +{fmtMoney(cash)} cash
-                                </span>
-                              )}
-                              {cash > 0 && inv > 0 && (
-                                <span className="mx-1 text-zinc-700">·</span>
-                              )}
-                              {inv > 0 && (
-                                <span className="text-blue-400">
-                                  +{fmtMoney(inv)} inv
-                                </span>
-                              )}
-                            </span>
-                          </div>
-                          {s.notes && (
-                            <div className="mt-0.5 text-[11px] text-zinc-500">
-                              {s.notes}
-                            </div>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : (
-                  <p className="rounded-xl border border-dashed border-zinc-800 px-4 py-6 text-center text-xs text-zinc-600">
-                    No contributions yet
-                  </p>
-                )}
+                <ContributionsList contributions={contributions} />
               </div>
             </div>
           </Card>
