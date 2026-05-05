@@ -132,9 +132,9 @@ export default async function GoalsPage() {
         </div>
       </section>
 
-      {/* Revenue */}
+      {/* Sales */}
       <section>
-        <SectionHeader title="Revenue · Gosian Media" tone="blue" />
+        <SectionHeader title="Sales · Gosian Media" tone="blue" />
         <Stat label="YTD" value={fmtMoney(ytd)} />
         <Stat label="Min target" value={fmtMoney(REVENUE_MIN)} />
         <Stat label="Stretch target" value={fmtMoney(REVENUE_STRETCH)} />

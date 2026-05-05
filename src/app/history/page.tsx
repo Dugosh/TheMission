@@ -27,25 +27,28 @@ export default async function HistoryPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 pt-6 pb-12 space-y-10">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">History</h1>
-        <a
-          href="/api/export"
-          className="rounded border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-xs uppercase tracking-wider hover:border-zinc-500"
-        >
-          Export CSV
-        </a>
-      </div>
-
-      {/* Calendar */}
+      {/* Calendar — top of page, centered */}
       <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+        <div className="mb-5 flex items-center justify-between">
+          <h1 className="text-3xl font-bold tracking-tight">History</h1>
+          <a
+            href="/api/export"
+            className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-1.5 text-xs uppercase tracking-wider hover:border-zinc-500"
+          >
+            Export CSV
+          </a>
+        </div>
+        <h2 className="mb-4 text-center text-sm font-semibold uppercase tracking-widest text-zinc-400">
           Compliance calendar
         </h2>
-        <div className="overflow-x-auto">
-          <CalendarGrid grid={grid} map={map} />
+        <div className="-mx-4 overflow-x-auto px-4">
+          <div className="flex min-w-fit justify-center">
+            <CalendarGrid grid={grid} map={map} />
+          </div>
         </div>
-        <Legend />
+        <div className="mt-4 flex justify-center">
+          <Legend />
+        </div>
       </section>
 
       {/* Weekly */}
@@ -64,7 +67,7 @@ export default async function HistoryPage() {
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
           This month
         </h2>
-        <div className="rounded border border-zinc-800 bg-zinc-950 px-4 py-3 space-y-1.5 text-sm">
+        <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 space-y-1.5 text-sm">
           <Row k="Days logged" v={String(month.daysLogged)} />
           <Row k="Avg weight" v={month.avgWeight != null ? `${month.avgWeight.toFixed(1)} lbs` : "—"} />
           <Row k="Weight change (1st → today avg)" v={month.weightDelta != null ? `${month.weightDelta > 0 ? "+" : ""}${month.weightDelta.toFixed(1)} lbs` : "—"} />
@@ -92,7 +95,7 @@ export default async function HistoryPage() {
               .map((l) => (
                 <li
                   key={l.date}
-                  className="flex items-center justify-between rounded border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm"
+                  className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 text-sm"
                 >
                   <span className="tabular-nums">{l.date}</span>
                   <span className="text-xs text-zinc-500 flex gap-3">
@@ -115,7 +118,7 @@ export default async function HistoryPage() {
         <Link href="/" className="underline">
           Today
         </Link>{" "}
-        for current day, or extend with date routes later.
+        with the day picker arrows.
       </p>
     </div>
   );
@@ -124,11 +127,9 @@ export default async function HistoryPage() {
 type Cell = { date: string; future: boolean };
 
 function buildGrid(todayIso: string, weeks: number): Cell[][] {
-  // Returns columns of weeks; each column is [Sun..Sat]
   const [ty, tm, td] = todayIso.split("-").map(Number);
   const todayDate = new Date(ty, tm - 1, td);
-  // Find Saturday at end of this week
-  const dayOfWeek = todayDate.getDay(); // 0 = Sun
+  const dayOfWeek = todayDate.getDay();
   const endSat = new Date(todayDate);
   endSat.setDate(todayDate.getDate() + (6 - dayOfWeek));
 
@@ -161,9 +162,9 @@ function CalendarGrid({
   map: Map<string, Partial<DailyLog>>;
 }) {
   return (
-    <div className="flex gap-[3px]">
+    <div className="flex gap-[5px]">
       {grid.map((col, ci) => (
-        <div key={ci} className="flex flex-col gap-[3px]">
+        <div key={ci} className="flex flex-col gap-[5px]">
           {col.map((c) => {
             const log = map.get(c.date);
             const cls = cellClass(c, log);
@@ -171,7 +172,7 @@ function CalendarGrid({
               <div
                 key={c.date}
                 title={`${c.date}${log ? ` · ${cellTitle(log)}` : ""}`}
-                className={"h-3 w-3 rounded-[2px] " + cls}
+                className={"h-5 w-5 rounded " + cls}
               />
             );
           })}
@@ -184,7 +185,6 @@ function CalendarGrid({
 function cellClass(c: Cell, log: Partial<DailyLog> | undefined): string {
   if (c.future) return "bg-zinc-900/40";
   if (!log) return "bg-zinc-900";
-  // 0 = no subs cleared, 5 = all
   let count = 0;
   for (const s of SUBTRACTIONS) if (log[s.key]) count++;
   if (count === 5) return "bg-emerald-500";
@@ -203,16 +203,16 @@ function cellTitle(log: Partial<DailyLog>): string {
 
 function Legend() {
   return (
-    <div className="mt-3 flex items-center gap-2 text-[10px] uppercase tracking-wider text-zinc-500">
+    <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-zinc-500">
       <span>0/5</span>
-      <div className="h-3 w-3 rounded-[2px] bg-red-500" />
-      <div className="h-3 w-3 rounded-[2px] bg-red-700" />
-      <div className="h-3 w-3 rounded-[2px] bg-amber-700" />
-      <div className="h-3 w-3 rounded-[2px] bg-emerald-900" />
-      <div className="h-3 w-3 rounded-[2px] bg-emerald-700" />
-      <div className="h-3 w-3 rounded-[2px] bg-emerald-500" />
+      <div className="h-3 w-3 rounded bg-red-500" />
+      <div className="h-3 w-3 rounded bg-red-700" />
+      <div className="h-3 w-3 rounded bg-amber-700" />
+      <div className="h-3 w-3 rounded bg-emerald-900" />
+      <div className="h-3 w-3 rounded bg-emerald-700" />
+      <div className="h-3 w-3 rounded bg-emerald-500" />
       <span>5/5</span>
-      <div className="h-3 w-3 rounded-[2px] bg-zinc-900 ml-2" />
+      <div className="h-3 w-3 rounded bg-zinc-900 ml-2" />
       <span>not logged</span>
     </div>
   );
@@ -226,7 +226,6 @@ function weekSummary(
   const [ty, tm, td] = todayIso.split("-").map(Number);
   const todayDate = new Date(ty, tm - 1, td);
   const dayOfWeek = todayDate.getDay();
-  // Sunday of this week
   const sunday = new Date(todayDate);
   sunday.setDate(todayDate.getDate() - dayOfWeek - weeksBack * 7);
 
@@ -236,7 +235,7 @@ function weekSummary(
   let stepsCount = 0;
   let workTotal = 0;
   let workCount = 0;
-  let weights: number[] = [];
+  const weights: number[] = [];
 
   for (let i = 0; i < 7; i++) {
     const d = new Date(sunday);
@@ -284,7 +283,7 @@ function monthSummary(map: Map<string, Partial<DailyLog>>, todayIso: string) {
   let stepsCount = 0;
   let workTotal = 0;
   let workCount = 0;
-  let weights: { date: string; w: number }[] = [];
+  const weights: { date: string; w: number }[] = [];
   for (const l of logs) {
     if (l.sauna) saunaCount++;
     if (workoutDone(l)) workoutCount++;
@@ -306,7 +305,6 @@ function monthSummary(map: Map<string, Partial<DailyLog>>, todayIso: string) {
     weights.length > 0
       ? weights.reduce((s, x) => s + x.w, 0) / weights.length
       : null;
-  // Delta = last weight minus first weight in month
   const weightDelta =
     weights.length >= 2 ? weights[weights.length - 1].w - weights[0].w : null;
   const _ = rollingAverageWeight; // suppress unused
@@ -331,7 +329,7 @@ function SummaryCard({
   s: ReturnType<typeof weekSummary>;
 }) {
   return (
-    <div className="rounded border border-zinc-800 bg-zinc-950 px-4 py-3 space-y-1 text-sm">
+    <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 space-y-1 text-sm">
       <div className="text-xs uppercase tracking-wider text-zinc-500">
         {title}
       </div>

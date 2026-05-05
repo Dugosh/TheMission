@@ -158,7 +158,7 @@ export default async function Today({
             pct={avg7 != null ? pct(WEIGHT_START - avg7, WEIGHT_START - WEIGHT_TARGET) : 0}
           />
           <GoalRow
-            label="Revenue"
+            label="Sales"
             primary={fmtMoney(ytdRevenue)}
             secondary={`${revenuePct.toFixed(1)}% to ${fmtMoney(REVENUE_MIN)}`}
             pct={revenuePct}

@@ -98,8 +98,8 @@ export const WEIGHT_START = 185;
 export const WEIGHT_TARGET = 145;
 export const WEIGHT_DEADLINE = "2026-12-31";
 
-export const REVENUE_MIN = 1_500_000;
-export const REVENUE_STRETCH = 2_000_000;
+export const REVENUE_MIN = 3_000_000;
+export const REVENUE_STRETCH = 4_000_000;
 export const REVENUE_YEAR = 2026;
 
 export const SAVINGS_TARGET = 100_000;
