@@ -24,7 +24,6 @@ export async function GET() {
     { data: payments },
     { data: savings },
     { data: income },
-    { data: netWorth },
     { data: todos },
   ] = await Promise.all([
     sb.from("daily_logs").select("*").order("date"),
@@ -33,7 +32,6 @@ export async function GET() {
     sb.from("debt_payments").select("*").order("date"),
     sb.from("savings_snapshots").select("*").order("date"),
     sb.from("personal_income_entries").select("*").order("month"),
-    sb.from("net_worth_snapshots").select("*").order("date"),
     sb.from("todos").select("*").order("created_at"),
   ]);
 
@@ -44,7 +42,6 @@ export async function GET() {
   parts.push("\n\n# DEBT_PAYMENTS\n" + toCsv(payments ?? []));
   parts.push("\n\n# SAVINGS_SNAPSHOTS\n" + toCsv(savings ?? []));
   parts.push("\n\n# PERSONAL_INCOME\n" + toCsv(income ?? []));
-  parts.push("\n\n# NET_WORTH_SNAPSHOTS\n" + toCsv(netWorth ?? []));
   parts.push("\n\n# TODOS\n" + toCsv(todos ?? []));
   const body = parts.join("");
   const today = new Date().toISOString().slice(0, 10);

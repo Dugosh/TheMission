@@ -27,7 +27,7 @@ import {
   WEIGHT_TARGET,
   REVENUE_MIN,
   REVENUE_YEAR,
-  SAVINGS_TARGET,
+  WEALTH_TARGET,
 } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -89,8 +89,10 @@ export default async function Today({
   const debtRemaining = Math.max(0, debtTotal - debtPaid);
   const debtPct = pct(debtPaid, debtTotal);
 
-  const savingsBalance = savings ? Number(savings.balance) : 0;
-  const savingsPct = pct(savingsBalance, SAVINGS_TARGET);
+  const cashBalance = savings ? Number(savings.balance) : 0;
+  const investedBalance = savings ? Number(savings.invested_balance) : 0;
+  const wealthBalance = cashBalance + investedBalance;
+  const wealthPct = pct(wealthBalance, WEALTH_TARGET);
 
   const recentWeights = recent
     .filter((l) => l.weight_lbs != null)
@@ -197,10 +199,10 @@ export default async function Today({
               tone="amber"
             />
             <GoalRow
-              label="Savings"
-              primary={fmtMoney(savingsBalance)}
-              secondary={`${savingsPct.toFixed(1)}% of ${fmtMoney(SAVINGS_TARGET)}`}
-              pct={savingsPct}
+              label="Cash + Invested"
+              primary={fmtMoney(wealthBalance)}
+              secondary={`${wealthPct.toFixed(1)}% of ${fmtMoney(WEALTH_TARGET)}`}
+              pct={wealthPct}
               tone="blue"
             />
           </div>

@@ -5,8 +5,6 @@ import {
   getLatestSavings,
   listSavings,
   listPersonalIncome,
-  listNetWorth,
-  getLatestNetWorth,
 } from "@/app/actions/goals";
 import { getRecentLogs } from "@/app/actions/daily";
 import {
@@ -24,15 +22,15 @@ import {
   REVENUE_STRETCH,
   REVENUE_YEAR,
   SAVINGS_TARGET,
+  INVESTED_TARGET,
+  WEALTH_TARGET,
 } from "@/lib/types";
 import ProgressBar from "@/components/ProgressBar";
-import Sparkline from "@/components/Sparkline";
 import RevenueForm from "./_revenue-form";
 import DebtForm from "./_debt-form";
 import DebtManager from "./_debt-manager";
 import SavingsForm from "./_savings-form";
 import IncomeForm from "./_income-form";
-import NetWorthForm from "./_net-worth-form";
 
 export const dynamic = "force-dynamic";
 
@@ -46,8 +44,6 @@ export default async function GoalsPage() {
     savings,
     savingsList,
     income,
-    netWorthList,
-    latestNetWorth,
   ] = await Promise.all([
     getRecentLogs(180),
     listRevenue(),
@@ -56,8 +52,6 @@ export default async function GoalsPage() {
     getLatestSavings(),
     listSavings(),
     listPersonalIncome(),
-    listNetWorth(),
-    getLatestNetWorth(),
   ]);
 
   // ---- Weight ----
@@ -88,8 +82,11 @@ export default async function GoalsPage() {
   const debtPaid = Object.values(paidByDebtId).reduce((s, n) => s + n, 0);
   const debtRemaining = Math.max(0, debtTotal - debtPaid);
 
-  // ---- Savings ----
-  const savingsBalance = savings ? Number(savings.balance) : 0;
+  // ---- Wealth (cash + invested) ----
+  const cashBalance = savings ? Number(savings.balance) : 0;
+  const investedBalance = savings ? Number(savings.invested_balance) : 0;
+  const savingsBalance = cashBalance; // back-compat alias for any leftover refs
+  const wealthBalance = cashBalance + investedBalance;
 
   // ---- Personal income ----
   const incomeYear = income.filter((e) =>
@@ -100,17 +97,6 @@ export default async function GoalsPage() {
   const incomeMonthlyAvg =
     incomeMonthsLogged > 0 ? incomeYTD / incomeMonthsLogged : 0;
   const incomeProjected = incomeMonthlyAvg * 12;
-
-  // ---- Net worth ----
-  const nwAsc = netWorthList.slice().reverse();
-  const nwCurrent = latestNetWorth ? Number(latestNetWorth.amount) : null;
-  const nwFirst = nwAsc.length > 0 ? Number(nwAsc[0].amount) : null;
-  const nwYTDDelta =
-    nwCurrent != null && nwFirst != null ? nwCurrent - nwFirst : null;
-  const nwSparkPoints = nwAsc.map((s) => ({
-    x: dayIndex(s.date),
-    y: Number(s.amount),
-  }));
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 pt-16 pb-10 lg:px-8 lg:pt-8">
@@ -216,65 +202,6 @@ export default async function GoalsPage() {
           </div>
         </Card>
 
-        {/* Net worth */}
-        <Card>
-          <SectionHeader title="Net worth" tone="green" />
-          <Stat
-            label="Current"
-            value={nwCurrent != null ? fmtMoney(nwCurrent) : "—"}
-          />
-          <Stat
-            label="First snapshot"
-            value={nwFirst != null ? fmtMoney(nwFirst) : "—"}
-          />
-          <Stat
-            label="Δ since first"
-            value={
-              nwYTDDelta != null
-                ? `${nwYTDDelta >= 0 ? "+" : ""}${fmtMoney(nwYTDDelta)}`
-                : "—"
-            }
-          />
-          <Stat label="Last updated" value={latestNetWorth?.date ?? "—"} />
-
-          <div className="mt-4">
-            {nwSparkPoints.length >= 2 ? (
-              <Sparkline points={nwSparkPoints} color="52,211,153" />
-            ) : (
-              <p className="rounded-xl border border-dashed border-zinc-800 px-4 py-6 text-center text-xs text-zinc-600">
-                Add at least 2 snapshots to chart your trend
-              </p>
-            )}
-          </div>
-
-          <div className="mt-4">
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-              Add snapshot
-            </h3>
-            <NetWorthForm />
-            <p className="mt-2 text-[11px] text-zinc-500">
-              Calculate as: total assets (savings + investments + home equity) −
-              total liabilities (debts).
-            </p>
-          </div>
-
-          {netWorthList.length > 0 && (
-            <ul className="mt-4 space-y-1 text-sm">
-              {netWorthList.slice(0, 5).map((s) => (
-                <li
-                  key={s.id}
-                  className="flex justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2"
-                >
-                  <span className="text-zinc-500 tabular-nums">{s.date}</span>
-                  <span className="tabular-nums font-medium">
-                    {fmtMoney(Number(s.amount))}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-
         {/* Debt — full width */}
         <div className="lg:col-span-2">
           <Card>
@@ -360,51 +287,110 @@ export default async function GoalsPage() {
           </Card>
         </div>
 
-        {/* Savings */}
+        {/* Wealth — cash + invested */}
         <div className="lg:col-span-2">
           <Card>
-            <SectionHeader title="Cash savings" tone="blue" />
+            <SectionHeader title="Cash + Invested" tone="blue" />
+
+            {/* Hero summary */}
+            <div className="mb-6 rounded-xl border border-blue-700/30 bg-gradient-to-br from-blue-950/20 to-zinc-950 p-5">
+              <div className="flex flex-wrap items-end justify-between gap-4">
+                <div>
+                  <div className="text-xs uppercase tracking-wider text-blue-300/70">
+                    Total wealth
+                  </div>
+                  <div className="mt-1 text-4xl font-bold tabular-nums text-zinc-100">
+                    {fmtMoney(wealthBalance)}
+                  </div>
+                  <div className="mt-1 text-xs text-zinc-500 tabular-nums">
+                    {fmtMoney(cashBalance)} cash + {fmtMoney(investedBalance)} invested
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs uppercase tracking-wider text-zinc-500">
+                    % to goal
+                  </div>
+                  <div className="mt-1 text-4xl font-bold tabular-nums text-blue-400">
+                    {pct(wealthBalance, WEALTH_TARGET).toFixed(1)}%
+                  </div>
+                  <div className="mt-1 text-xs text-zinc-500 tabular-nums">
+                    of {fmtMoney(WEALTH_TARGET)}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4">
+                <ProgressBar
+                  pct={pct(wealthBalance, WEALTH_TARGET)}
+                  tone="blue"
+                />
+              </div>
+            </div>
+
+            {/* 4-stat breakdown */}
+            <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <BreakdownStat
+                label="Cash balance"
+                value={fmtMoney(cashBalance)}
+                accent="blue"
+              />
+              <BreakdownStat
+                label="Invested balance"
+                value={fmtMoney(investedBalance)}
+                accent="blue"
+              />
+              <BreakdownStat
+                label="Combined"
+                value={fmtMoney(wealthBalance)}
+              />
+              <BreakdownStat
+                label="Remaining"
+                value={fmtMoney(Math.max(0, WEALTH_TARGET - wealthBalance))}
+              />
+            </div>
+
             <div className="grid gap-6 lg:grid-cols-2">
               <div>
-                <Stat
-                  label="Current balance"
-                  value={fmtMoney(savingsBalance)}
-                />
-                <Stat label="Target" value={fmtMoney(SAVINGS_TARGET)} />
-                <Stat
-                  label="Remaining"
-                  value={fmtMoney(
-                    Math.max(0, SAVINGS_TARGET - savingsBalance)
-                  )}
-                />
-                <Stat
-                  label="% to goal"
-                  value={`${pct(savingsBalance, SAVINGS_TARGET).toFixed(1)}%`}
-                />
-                <div className="mt-3 mb-4">
-                  <ProgressBar
-                    pct={pct(savingsBalance, SAVINGS_TARGET)}
-                    tone="blue"
-                  />
-                </div>
+                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+                  Add snapshot
+                </h3>
                 <SavingsForm />
+                <p className="mt-2 text-[11px] text-zinc-500">
+                  Update both balances together. Cash target {fmtMoney(SAVINGS_TARGET)},
+                  invested target {fmtMoney(INVESTED_TARGET)}.
+                </p>
               </div>
               <div>
+                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
+                  Recent snapshots
+                </h3>
                 {savingsList.length > 0 ? (
                   <ul className="space-y-1 text-sm">
-                    {savingsList.slice(0, 10).map((s) => (
-                      <li
-                        key={s.id}
-                        className="flex justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2"
-                      >
-                        <span className="text-zinc-500 tabular-nums">
-                          {s.date}
-                        </span>
-                        <span className="tabular-nums">
-                          {fmtMoney(Number(s.balance))}
-                        </span>
-                      </li>
-                    ))}
+                    {savingsList.slice(0, 10).map((s) => {
+                      const cash = Number(s.balance);
+                      const inv = Number(s.invested_balance);
+                      return (
+                        <li
+                          key={s.id}
+                          className="flex justify-between rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2"
+                        >
+                          <span className="text-zinc-500 tabular-nums">
+                            {s.date}
+                          </span>
+                          <span className="tabular-nums">
+                            <span className="text-zinc-400">
+                              {fmtMoney(cash)}
+                            </span>
+                            <span className="mx-1 text-zinc-700">+</span>
+                            <span className="text-zinc-400">
+                              {fmtMoney(inv)}
+                            </span>
+                            <span className="ml-2 font-medium">
+                              = {fmtMoney(cash + inv)}
+                            </span>
+                          </span>
+                        </li>
+                      );
+                    })}
                   </ul>
                 ) : (
                   <p className="rounded-xl border border-dashed border-zinc-800 px-4 py-6 text-center text-xs text-zinc-600">
@@ -467,25 +453,23 @@ function BreakdownStat({
 }: {
   label: string;
   value: string;
-  accent?: "amber";
+  accent?: "amber" | "blue";
 }) {
+  const valueClass =
+    accent === "amber"
+      ? "text-amber-400"
+      : accent === "blue"
+        ? "text-blue-400"
+        : "text-zinc-100";
   return (
     <div className="rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3">
       <div className="text-[11px] uppercase tracking-wider text-zinc-500">
         {label}
       </div>
-      <div
-        className={`mt-1 text-xl font-semibold tabular-nums ${
-          accent === "amber" ? "text-amber-400" : "text-zinc-100"
-        }`}
-      >
+      <div className={`mt-1 text-xl font-semibold tabular-nums ${valueClass}`}>
         {value}
       </div>
     </div>
   );
 }
 
-function dayIndex(iso: string): number {
-  const [y, m, d] = iso.split("-").map(Number);
-  return Math.floor(Date.UTC(y, m - 1, d) / 86400000);
-}

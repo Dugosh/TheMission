@@ -94,19 +94,13 @@ export type DebtPayment = {
 export type SavingsSnapshot = {
   id: string;
   date: string;
-  balance: number;
+  balance: number; // cash balance
+  invested_balance: number; // invested balance
 };
 
 export type PersonalIncomeEntry = {
   id: string;
   month: string; // YYYY-MM-01
-  amount: number;
-  notes: string | null;
-};
-
-export type NetWorthSnapshot = {
-  id: string;
-  date: string;
   amount: number;
   notes: string | null;
 };
@@ -120,4 +114,6 @@ export const REVENUE_MIN = 3_000_000;
 export const REVENUE_STRETCH = 4_000_000;
 export const REVENUE_YEAR = 2026;
 
-export const SAVINGS_TARGET = 100_000;
+export const SAVINGS_TARGET = 100_000; // cash component
+export const INVESTED_TARGET = 100_000; // invested component
+export const WEALTH_TARGET = SAVINGS_TARGET + INVESTED_TARGET; // combined target

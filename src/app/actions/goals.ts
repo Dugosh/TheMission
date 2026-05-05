@@ -7,7 +7,6 @@ import {
   DebtPayment,
   SavingsSnapshot,
   PersonalIncomeEntry,
-  NetWorthSnapshot,
 } from "@/lib/types";
 import { revalidatePath } from "next/cache";
 
@@ -162,11 +161,15 @@ export async function listSavings(): Promise<SavingsSnapshot[]> {
   return (data || []) as SavingsSnapshot[];
 }
 
-export async function addSavingsSnapshot(date: string, balance: number) {
+export async function addSavingsSnapshot(
+  date: string,
+  balance: number,
+  invested_balance = 0
+) {
   const supabase = getSupabase();
   const { error } = await supabase
     .from("savings_snapshots")
-    .insert({ date, balance });
+    .insert({ date, balance, invested_balance });
   if (error) throw new Error(error.message);
   revalidatePath("/goals");
   revalidatePath("/");
@@ -193,46 +196,3 @@ export async function upsertPersonalIncome(month: string, amount: number) {
   revalidatePath("/goals");
 }
 
-// ---- Net worth ----
-
-export async function listNetWorth(): Promise<NetWorthSnapshot[]> {
-  const supabase = getSupabase();
-  const { data, error } = await supabase
-    .from("net_worth_snapshots")
-    .select("*")
-    .order("date", { ascending: false });
-  if (error) throw new Error(error.message);
-  return (data || []) as NetWorthSnapshot[];
-}
-
-export async function getLatestNetWorth(): Promise<NetWorthSnapshot | null> {
-  const supabase = getSupabase();
-  const { data, error } = await supabase
-    .from("net_worth_snapshots")
-    .select("*")
-    .order("date", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  return data as NetWorthSnapshot | null;
-}
-
-export async function addNetWorthSnapshot(date: string, amount: number) {
-  const supabase = getSupabase();
-  const { error } = await supabase
-    .from("net_worth_snapshots")
-    .insert({ date, amount });
-  if (error) throw new Error(error.message);
-  revalidatePath("/goals");
-  revalidatePath("/");
-}
-
-export async function deleteNetWorthSnapshot(id: string) {
-  const supabase = getSupabase();
-  const { error } = await supabase
-    .from("net_worth_snapshots")
-    .delete()
-    .eq("id", id);
-  if (error) throw new Error(error.message);
-  revalidatePath("/goals");
-}
