@@ -7,6 +7,7 @@ import {
   DebtPayment,
   SavingsSnapshot,
   WealthContribution,
+  WealthAccount,
   PersonalIncomeEntry,
 } from "@/lib/types";
 import { revalidatePath } from "next/cache";
@@ -151,23 +152,116 @@ export async function listContributions(): Promise<WealthContribution[]> {
   return (data || []) as WealthContribution[];
 }
 
-/** Sum every contribution into a single (cash, invested) pair. */
+/** Sum each account's current balance into a (cash, invested) pair. */
 export async function getWealthTotals(): Promise<{
   cashTotal: number;
   investedTotal: number;
 }> {
   const supabase = getSupabase();
   const { data, error } = await supabase
-    .from("wealth_contributions")
-    .select("cash_amount, invested_amount");
+    .from("wealth_accounts")
+    .select("account_type, balance")
+    .eq("archived", false);
   if (error) throw new Error(error.message);
   let cashTotal = 0;
   let investedTotal = 0;
   for (const row of data || []) {
-    cashTotal += Number(row.cash_amount ?? 0);
-    investedTotal += Number(row.invested_amount ?? 0);
+    const v = Number(row.balance ?? 0);
+    if (row.account_type === "Cash") cashTotal += v;
+    else if (row.account_type === "Investment") investedTotal += v;
   }
   return { cashTotal, investedTotal };
+}
+
+// ---- Wealth accounts (named buckets the user maintains) ----
+
+export async function listWealthAccounts(): Promise<WealthAccount[]> {
+  const supabase = getSupabase();
+  const { data, error } = await supabase
+    .from("wealth_accounts")
+    .select("*")
+    .eq("archived", false)
+    .order("account_type", { ascending: true })
+    .order("display_order", { ascending: true })
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data || []) as WealthAccount[];
+}
+
+export async function createWealthAccount(input: {
+  name: string;
+  account_type: "Cash" | "Investment";
+  balance: number;
+  notes?: string;
+}) {
+  const supabase = getSupabase();
+  const { data: maxRow } = await supabase
+    .from("wealth_accounts")
+    .select("display_order")
+    .eq("account_type", input.account_type)
+    .order("display_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const nextOrder = ((maxRow?.display_order as number) ?? 0) + 1;
+  const { error } = await supabase.from("wealth_accounts").insert({
+    name: input.name.trim(),
+    account_type: input.account_type,
+    balance: input.balance,
+    notes: input.notes?.trim() || null,
+    display_order: nextOrder,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath("/goals");
+  revalidatePath("/");
+}
+
+export async function updateWealthAccount(
+  id: string,
+  patch: {
+    name?: string;
+    account_type?: "Cash" | "Investment";
+    balance?: number;
+    notes?: string | null;
+  }
+) {
+  const supabase = getSupabase();
+  const cleanPatch: Record<string, unknown> = { ...patch, updated_at: new Date().toISOString() };
+  if (patch.notes !== undefined) {
+    cleanPatch.notes =
+      patch.notes && patch.notes.trim() ? patch.notes.trim() : null;
+  }
+  const { error } = await supabase
+    .from("wealth_accounts")
+    .update(cleanPatch)
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/goals");
+  revalidatePath("/");
+}
+
+export async function archiveWealthAccount(id: string) {
+  const supabase = getSupabase();
+  const { error } = await supabase
+    .from("wealth_accounts")
+    .update({ archived: true, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/goals");
+  revalidatePath("/");
+}
+
+export async function reorderWealthAccounts(orderedIds: string[]) {
+  if (!orderedIds.length) return;
+  const supabase = getSupabase();
+  const updates = orderedIds.map((id, idx) =>
+    supabase.from("wealth_accounts").update({ display_order: idx }).eq("id", id)
+  );
+  const results = await Promise.all(updates);
+  for (const r of results) {
+    if (r.error) throw new Error(r.error.message);
+  }
+  revalidatePath("/goals");
+  revalidatePath("/");
 }
 
 export async function addContribution(

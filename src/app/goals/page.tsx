@@ -3,7 +3,7 @@ import {
   listDebts,
   listDebtPayments,
   getWealthTotals,
-  listContributions,
+  listWealthAccounts,
 } from "@/app/actions/goals";
 import { getRecentLogs } from "@/app/actions/daily";
 import {
@@ -28,8 +28,7 @@ import ProgressBar from "@/components/ProgressBar";
 import RevenueForm from "./_revenue-form";
 import DebtForm from "./_debt-form";
 import DebtManager from "./_debt-manager";
-import SavingsForm from "./_savings-form";
-import ContributionsList from "./_contributions-list";
+import AccountManager from "./_account-manager";
 import DebtPieChart from "@/components/DebtPieChart";
 import DebtPaydownChart from "@/components/DebtPaydownChart";
 import { DEBT_CATEGORIES } from "@/lib/types";
@@ -44,14 +43,14 @@ export default async function GoalsPage() {
     debts,
     payments,
     wealthTotals,
-    contributions,
+    accounts,
   ] = await Promise.all([
     getRecentLogs(180),
     listRevenue(),
     listDebts(),
     listDebtPayments(),
     getWealthTotals(),
-    listContributions(),
+    listWealthAccounts(),
   ]);
 
   // ---- Weight ----
@@ -269,24 +268,11 @@ export default async function GoalsPage() {
               />
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-2">
-              <div>
-                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-                  Log a contribution
-                </h3>
-                <SavingsForm />
-                <p className="mt-2 text-[11px] text-zinc-500">
-                  Each contribution adds to your running totals. Cash target {fmtMoney(SAVINGS_TARGET)},
-                  invested target {fmtMoney(INVESTED_TARGET)}.
-                </p>
-              </div>
-              <div>
-                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-zinc-400">
-                  Recent contributions
-                </h3>
-                <ContributionsList contributions={contributions} />
-              </div>
-            </div>
+            <AccountManager accounts={accounts} />
+            <p className="mt-3 text-[11px] text-zinc-500">
+              Each account holds a current balance you update manually. Cash
+              target {fmtMoney(SAVINGS_TARGET)}, invested target {fmtMoney(INVESTED_TARGET)}.
+            </p>
           </Card>
         </div>
 

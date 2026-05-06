@@ -94,12 +94,25 @@ export type DebtPayment = {
 export type WealthContribution = {
   id: string;
   date: string;
-  cash_amount: number; // deposit into cash on this date
-  invested_amount: number; // deposit into investments on this date
+  cash_amount: number;
+  invested_amount: number;
   notes: string | null;
 };
 // Back-compat alias — older code still imports SavingsSnapshot.
 export type SavingsSnapshot = WealthContribution;
+
+export const WEALTH_ACCOUNT_TYPES = ["Cash", "Investment"] as const;
+export type WealthAccountType = (typeof WEALTH_ACCOUNT_TYPES)[number];
+
+export type WealthAccount = {
+  id: string;
+  name: string;
+  account_type: WealthAccountType;
+  balance: number;
+  display_order: number;
+  archived: boolean;
+  notes: string | null;
+};
 
 export type PersonalIncomeEntry = {
   id: string;
