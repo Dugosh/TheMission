@@ -23,10 +23,11 @@ export type DailyLog = {
   notes: string | null;
 };
 
+// Subtractions tracked toward the clean streak. no_weed remains in DailyLog
+// for historical-data compatibility but is no longer surfaced in the UI.
 export const SUBTRACTIONS: { key: keyof DailyLog; label: string }[] = [
   { key: "no_vape", label: "No vape" },
   { key: "no_porn", label: "No porn / masturbation" },
-  { key: "no_weed", label: "No weed" },
   { key: "no_processed_food", label: "No processed food" },
   { key: "no_alcohol", label: "No alcohol" },
 ];

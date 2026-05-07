@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 import {
   CloudOff,
   EyeOff,
-  Leaf,
   Pizza,
   Wine,
   Footprints,
@@ -105,12 +104,6 @@ export default function TileGrid({ date, initial }: Props) {
             label="No porn"
             value={log.no_porn ?? false}
             onTap={() => toggle("no_porn")}
-          />
-          <ToggleTile
-            icon={Leaf}
-            label="No weed"
-            value={log.no_weed ?? false}
-            onTap={() => toggle("no_weed")}
           />
           <ToggleTile
             icon={Pizza}

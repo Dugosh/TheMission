@@ -187,31 +187,36 @@ function cellClass(c: Cell, log: Partial<DailyLog> | undefined): string {
   if (!log) return "bg-zinc-900";
   let count = 0;
   for (const s of SUBTRACTIONS) if (log[s.key]) count++;
-  if (count === 5) return "bg-emerald-500";
-  if (count === 4) return "bg-emerald-700";
-  if (count === 3) return "bg-emerald-900";
-  if (count === 2) return "bg-amber-700";
-  if (count === 1) return "bg-red-700";
+  // Map 0..N to a color ramp regardless of how many subtractions exist.
+  const total = SUBTRACTIONS.length || 1;
+  const ratio = count / total; // 0..1
+  if (ratio >= 1) return "bg-emerald-500";
+  if (ratio >= 0.75) return "bg-emerald-700";
+  if (ratio >= 0.5) return "bg-emerald-900";
+  if (ratio >= 0.25) return "bg-amber-700";
+  if (ratio > 0) return "bg-red-700";
   return "bg-red-500";
 }
 
 function cellTitle(log: Partial<DailyLog>): string {
   let count = 0;
   for (const s of SUBTRACTIONS) if (log[s.key]) count++;
-  return `${count}/5 clean${log.weight_lbs != null ? ` · ${log.weight_lbs} lbs` : ""}`;
+  const total = SUBTRACTIONS.length;
+  return `${count}/${total} clean${log.weight_lbs != null ? ` · ${log.weight_lbs} lbs` : ""}`;
 }
 
 function Legend() {
+  const total = SUBTRACTIONS.length;
   return (
     <div className="flex items-center gap-2 text-[10px] uppercase tracking-wider text-zinc-500">
-      <span>0/5</span>
+      <span>0/{total}</span>
       <div className="h-3 w-3 rounded bg-red-500" />
       <div className="h-3 w-3 rounded bg-red-700" />
       <div className="h-3 w-3 rounded bg-amber-700" />
       <div className="h-3 w-3 rounded bg-emerald-900" />
       <div className="h-3 w-3 rounded bg-emerald-700" />
       <div className="h-3 w-3 rounded bg-emerald-500" />
-      <span>5/5</span>
+      <span>{total}/{total}</span>
       <div className="h-3 w-3 rounded bg-zinc-900 ml-2" />
       <span>not logged</span>
     </div>

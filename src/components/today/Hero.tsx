@@ -3,14 +3,15 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Flame, Activity, Sparkles } from "lucide-react";
 import { addDaysISO } from "@/lib/calc";
+import { SUBTRACTIONS } from "@/lib/types";
 
 type Props = {
   date: string;
   todayDate: string;
   cleanStreak: number;
-  cleanCountToday: number; // 0..5
+  cleanCountToday: number;
   workoutDoneToday: boolean;
-  targetsHitToday: number; // 0..N
+  targetsHitToday: number;
   targetsTotal: number;
 };
 
@@ -31,7 +32,8 @@ export default function Hero({
   const nextDate = addDaysISO(date, 1);
   const canGoForward = !isToday;
 
-  const allClean = cleanCountToday === 5;
+  const cleanTotal = SUBTRACTIONS.length;
+  const allClean = cleanCountToday === cleanTotal;
   const allTargets = targetsHitToday >= targetsTotal && workoutDoneToday;
 
   return (
@@ -123,7 +125,7 @@ export default function Hero({
           <ComplianceCard
             icon={<Sparkles size={14} />}
             label="Subtractions"
-            value={`${cleanCountToday}/5`}
+            value={`${cleanCountToday}/${cleanTotal}`}
             highlight={allClean}
           />
           <ComplianceCard
